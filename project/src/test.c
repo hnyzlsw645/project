@@ -15,7 +15,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = Tass_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
+    rv = Tass_OpenDevice(&phDeviceHandle, "124.127.49.180", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);
@@ -161,6 +161,7 @@ int main(void)
       printf("pcZekZmk = [%s]\n",pcZekZmk);
       printf("pkZekLmk = [%s]\n",pcZekLmk);
       printf("pkZekCv = [%s]\n",pcZekCv);
+
 #endif
    printf("\n================================解密pin==========================================================\n"); 
    //解密pin
@@ -191,7 +192,7 @@ int main(void)
     rv = Tass_DisperZmk(
       phSessionHandle,
       iKeyIdx,
-      pcKeyCipherByLmk,
+      pcZmkKey_LMK,
       pcDisData,
       iZmkIdx,
       pcZmkKey_LMK,
@@ -206,7 +207,7 @@ int main(void)
      printf("pcZmk_Zmk = [%s]\n",pcZmk_Zmk);
      printf("pcZmk_Lmk = [%s]\n",pcZmk_Lmk);
      printf("pcZmkCv = [%s]\n",pcZmkCv);
-
+#if 0
    printf("\n================================磁道加密==========================================================\n");
      char pcTrackText[] = "801617441513A2F135AB14EAAD1069DF";
      int  iTrackTextLen = strlen(pcTrackText);
@@ -363,7 +364,7 @@ int main(void)
         printf("SM2_D_ZMK = [%s]\n",SM2_D_ZMK);
         printf("SM2_PUBKEY = [%s]\n",SM2_PUBKEY);
         printf("SM2_LMK = [%s]\n",SM2_LMK);
-
+#endif
 
     //关闭会话句柄
     Tass_CloseSession(phSessionHandle);

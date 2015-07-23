@@ -544,7 +544,8 @@ Tass_DisperZmk(
     int iDstKeyDeriveNumber = strlen(pcDisData)/32;
     char pcCipherDstKey[128] ={0};
     char pcDstKeyCv[18] ={0};
-
+    //获取算法标识
+    
     rv = HSM_IC_ExportCipherKey(
     	hSessionHandle,
 	iEncryptMode,
@@ -556,7 +557,8 @@ Tass_DisperZmk(
     	iDstKeyDeriveNumber, pcDisData,
     	"",
     	pcZmk_ZMK/*out*/, pcDstKeyCv/*out*/);
-    if(rv)
+    
+     if(rv)
     {
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
         return rv;
@@ -569,7 +571,7 @@ Tass_DisperZmk(
     	"000",
 	 iZmkIdx,
 	 pcZmkKey_LMK,
-    	pcZmk_ZMK,
+    	 pcZmkKey_LMK,
 	 'X',
 	 'N',
     	0,
