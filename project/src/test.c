@@ -181,6 +181,7 @@ int main(void)
     }
       printf("pcPinText = [%s]\n",pcZekZmk);
     printf("\n=====================ZMK密钥分散生成ZMK密钥，并用ZMK加密保护导出=====================================\n");
+
     
     int iZmkIdx = 0;
     char pcDisData[65] = "00000000000000000000000000000000";
