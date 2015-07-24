@@ -15,7 +15,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = Tass_OpenDevice(&phDeviceHandle, "124.127.49.180", 8018, 8);
+    rv = Tass_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);
@@ -186,6 +186,7 @@ int main(void)
     
     int iZmkIdx = 0;
     char pcDisData[65] = "00000000000000000000000000000000";
+    char pcZmkKey_ZMK[128] = "X801617441513A2F135AB14EAAD1069DF";
     char pcZmkKey_LMK[128] = "X801617441513A2F135AB14EAAD1069DF";
     char pcZmk_Lmk[128] = {};
     char pcZmk_Zmk[128] = {};
@@ -195,7 +196,7 @@ int main(void)
       pcZmkKey_LMK,
       pcDisData,
       iZmkIdx,
-      pcZmkKey_LMK,
+      pcZmkKey_ZMK,
       pcZmk_Zmk,
       pcZmk_Lmk,
       pcZmkCv 

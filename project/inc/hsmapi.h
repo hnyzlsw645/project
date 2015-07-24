@@ -23,7 +23,24 @@ extern "C" {
 #endif
 
 /***************************************************************************
-* Subroutine: Tass_OpenDevice
+ * Subroutine: Tass_HsmApiInit
+ * Function:   通过指定配置文件的方式初始化接口
+ * Input:
+ *    @pcConfigFilePath      配置文件路径
+ * Output:
+ *    无
+ *
+ * Return:       0 for success, other is error
+ * Description:
+ *
+ * Author:       Luo Cangjian
+ * Date:         2015.05.29
+ * ModifyRecord:
+ ***************************************************************************/
+int Tass_HsmApiInit(char *pcConfigFilePath);
+
+/***************************************************************************
+* Subroutine: SDF_OpenDevice
 * Function:   打开设备句柄
 * Input:
 *    @pphDeviceHandle    设备句柄
@@ -40,10 +57,10 @@ extern "C" {
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLen);
+int SDF_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLen);
 
 /***************************************************************************
-* Subroutine: Tass_CloseDevice
+* Subroutine: SDF_CloseDevice
 * Function:   关闭设备句柄
 * Input:
 *    @phDeviceHandle    设备句柄
@@ -57,10 +74,10 @@ int Tass_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadL
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_CloseDevice(void *phDeviceHandle);
+int SDF_CloseDevice(void *phDeviceHandle);
 
 /***************************************************************************
-* Subroutine: Tass_OpenSession
+* Subroutine: SDF_OpenSession
 * Function:   打开会话句柄
 * Input:
 *    @phDeviceHandle      设备句柄
@@ -75,10 +92,10 @@ int Tass_CloseDevice(void *phDeviceHandle);
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_OpenSession(void *phDeviceHandle, void **pphSessionHandle);
+int SDF_OpenSession(void *phDeviceHandle, void **pphSessionHandle);
 
 /***************************************************************************
-* Subroutine: Tass_CloseSession
+* Subroutine: SDF_CloseSession
 * Function:   关闭会话句柄
 * Input:
 *    @phSessionHandle    会话句柄
@@ -92,10 +109,10 @@ int Tass_OpenSession(void *phDeviceHandle, void **pphSessionHandle);
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_CloseSession(void *phSessionHandle);
+int SDF_CloseSession(void *phSessionHandle);
 
 /***************************************************************************
-* Subroutine: Tass_GenerateRandom
+* Subroutine: Tass_GenRanData 
 * Function:   产生随机数
 * Input:
 *   @hSessionHandle  会话句柄
@@ -110,10 +127,10 @@ int Tass_CloseSession(void *phSessionHandle);
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
+Tass_GenRandData(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
 
 /***************************************************************************
-* Subroutine: Tass_GenANSIMac
+* Subroutine: Tass_Gen_ANSI_Mac
 * Function:   产生ANSIX9.19MAC
 * Input:
 *   @iKeyIdx            密钥索引
@@ -130,7 +147,7 @@ Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenANSIMac(
+Tass_Gen_ANSI_Mac(
         void *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -139,7 +156,7 @@ Tass_GenANSIMac(
         char    *pcMac/*out*/);
 
 /***************************************************************************
- *  Subroutine: Tass_GenerateZmk
+ *  Subroutine: Tass_Generate_Zmk
  *  Function:   随机生成ZMK
  *  Input:
  *    @hSessionHandle      会话句柄
@@ -158,7 +175,7 @@ Tass_GenANSIMac(
  *  ModifyRecord:
  * *************************************************************************/
 HSMAPI int
-Tass_GenerateZmk(
+Tass_Generate_Zmk(
         void *hSessionHandle,
         int iKeyIdx,
         char *pcKeyCipherByLmk,
@@ -167,7 +184,7 @@ Tass_GenerateZmk(
         char *pcZmkCipherByLmk,
         char *pcZmkCv);
 /***************************************************************************
- *  Subroutine: Tass_GeneratePik
+ *  Subroutine: Tass_Generate_Pik
  *  Function:   随机生成PIK
  *  Input:
  *    @hSessionHandle      会话句柄
@@ -186,7 +203,7 @@ Tass_GenerateZmk(
  *  ModifyRecord:
  * *************************************************************************/
 HSMAPI int
-Tass_GeneratePik(
+Tass_Generate_Pik(
         void *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -196,7 +213,7 @@ Tass_GeneratePik(
         char    *pcPikCv/*OUT*/ );
 
 /***************************************************************************
- *  Subroutine: Tass_GenerateMak
+ *  Subroutine: Tass_Generate_Mak
  *  Function:   随机生成MAK
  *  Input:
  *    @hSessionHandle      会话句柄
@@ -215,7 +232,7 @@ Tass_GeneratePik(
  *  ModifyRecord:
  * **************************************************************************/
 HSMAPI int
-Tass_GenerateMak(
+Tass_Generate_Mak(
         void *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -225,7 +242,7 @@ Tass_GenerateMak(
         char    *pcMakCv/*out*/);
 
 /***************************************************************************
- *  Subroutine: Tass_GenerateZek
+ *  Subroutine: Tass_Generate_Zek
  *  Function:   随机生成ZEK
  *  Input:
  *    @hSessionHandle      会话句柄
@@ -244,7 +261,7 @@ Tass_GenerateMak(
  *  ModifyRecord:
  *  *************************************************************************/
 HSMAPI int
-Tass_GenerateZek(
+Tass_Generate_Zek(
         void *hSessionHandle,
         int  iKeyIdx,
         char *pcKeyCipherByLmk,
@@ -253,7 +270,7 @@ Tass_GenerateZek(
         char *pcZekCipherByLmk/*out*/,
         char *pcZekCv/*out*/);
 /***************************************************************************
- *  Subroutine: Tass_DecryptPIN
+ *  Subroutine: Tass_Decrypt_PIN
  *  Function:   解密PIN
  *  Input:
  *    @iKeyIdx             密钥索引
@@ -271,7 +288,7 @@ Tass_GenerateZek(
  *  ModifyRecord:
  * *************************************************************************/
 HSMAPI int
-Tass_DecryptPIN(
+Tass_Decrypt_PIN(
         void    *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -281,7 +298,7 @@ Tass_DecryptPIN(
         char    *pcPinText/*out*/);
 
 /***************************************************************************
- * * Subroutine: Tass_DisperZmk
+ * * Subroutine: Tass_Disper_Zmk
  * * Function:   由一个ZMK分散生成另外一个子密钥，并通过ZMK密钥加密保护导出
  * * Input:
  * *   @hSessionHandle  会话句柄
@@ -300,7 +317,7 @@ Tass_DecryptPIN(
  * * ModifyRecord:
  * * *************************************************************************/
 HSMAPI int
-Tass_DisperZmk(
+Tass_Disper_Zmk(
     void *hSessionHandle, 
     int iKeyIdx,
     char *pcKey_LMK,
@@ -311,26 +328,26 @@ Tass_DisperZmk(
     char *pcZmk_LMK/*out*/, 
     char *pcZmkCv/*out*/);
 
-/***************************************************************************
- * * Subroutine: Tass_EncryptTrackData
- * * Function:   使用ZEK加密磁道数据。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @iKeyIdx         密钥索引
- * *   @pcKey_LMK       密钥密文
- * *   @pcTrackText     磁道密文
- * *   @iTrackTextLen   磁道密文长度
- * *   @iAlgId          解密模式
- * *   @pcIV            初始化IV 
- * * Output:
- * *   @pcTrackCipher   磁道密文
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ /***************************************************************************
+ * Subroutine: Tass_EncryptTrackData
+ * Function:   使用ZEK加密磁道数据。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @iKeyIdx         密钥索引
+ *   @pcKey_LMK       密钥密文
+ *   @pcTrackText     磁道密文
+ *   @iTrackTextLen   磁道密文长度
+ *   @iAlgId          解密模式
+ *   @pcIV            初始化IV 
+ * Output:
+ *   @pcTrackCipher   磁道密文
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_EncryptTrackData(
      void *hSessionHandle,
@@ -375,27 +392,27 @@ Tass_DecryptTrackData(
      char *pcIV,
      char *pcTrackText/*out*/);
 
-/***************************************************************************
- * * Subroutine: Tass_DecryptOper
- * * Function:   私钥解密运算接口。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @keytype         密钥类型
- * *   @Rsa_LMK         rsa本地密钥
- * *   @SM2_LMK         sm2本地密钥
- * *   @indata          外部送入数据
- * * Output:
- * *   @outdata         私钥解密后数据
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ /***************************************************************************
+ * Subroutine: Tass_PRIVATE_Oper
+ * Function:   私钥解密运算接口。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @keytype         密钥类型
+ *   @Rsa_LMK         rsa本地密钥
+ *   @SM2_LMK         sm2本地密钥
+ *   @indata          外部送入数据
+ * Output:
+ *   @outdata         私钥解密后数据
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 
 HSMAPI int 
-Tass_DecryptOper(
+Tass_PRIVATE_Oper(
      void *hSessionHandle,
      int keytype,
      char *Rsa_LMK,
@@ -404,7 +421,7 @@ Tass_DecryptOper(
      char *outdata/*out*/);
 
 /***************************************************************************
- *    Subroutine: Tass_PubKeyOper
+ *    Subroutine: Tass_PubKey_Oper
  *    Function:   RSA/SM2公钥加密运算接口
  *    Input:
  *      @hSessionHandle  会话句柄
@@ -423,7 +440,7 @@ Tass_DecryptOper(
  *    ModifyRecord:
  **************************************************************************/
 HSMAPI int 
-Tass_PubkeyOper(
+Tass_PubKey_Oper(
      void *hSessionHandle,
      int keytype,
      char *indata,
@@ -433,31 +450,31 @@ Tass_PubkeyOper(
      char *outdata/*out*/);
 
 /***************************************************************************
- * * Subroutine: Tass_GenRSAKey
- * * Function:   随机生成RSA密钥对，并使用ZMK加密导出
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @RsaLen          Rsa密钥长度
- * *   @zmkIndex
- * *   @zmk_Lmk
- * *   @zmk_disData
- * *   @mode
- * * Output:
- * *   @Rsa_D_ZMK
- * *   @Rsa_P_ZMK
- * *   @Rsa_Q_ZMK
- * *   @Rsa_DP_ZMK
- * *   @Rsa_DQ_ZMK
- * *   @Rsa_QINV_ZMK
- * *   @Rsa_N
- * *   @Rsa_E
- * *   @Rsa_LMK*
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_GenRSAKey
+ * Function:   随机生成RSA密钥对，并使用ZMK加密导出
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @RsaLen          Rsa密钥长度
+ *   @zmkIndex
+ *   @zmk_Lmk
+ *   @zmk_disData
+ *   @mode
+ * Output:
+ *   @Rsa_D_ZMK
+ *   @Rsa_P_ZMK
+ *   @Rsa_Q_ZMK
+ *   @Rsa_DP_ZMK
+ *   @Rsa_DQ_ZMK
+ *   @Rsa_QINV_ZMK
+ *   @Rsa_N
+ *   @Rsa_E
+ *   @Rsa_LMK*
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_GenRSAKey(
      void *hSessionHandle,

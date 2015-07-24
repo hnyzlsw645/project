@@ -33,6 +33,7 @@
 #include "hsmapi_define.h"
 #include "hsmapi_log.h"
 
+extern int  g_iInitFlg;
 extern int  g_iTimeout;
 extern int  g_iMsgHeadLen;
 extern int  g_iPort1;
@@ -844,6 +845,11 @@ int TCP_CommunicateHsm_ex(void *hSessionHandle, unsigned char *pucCmd, int iCmdL
     int rv = HAR_OK;
     SESSION_STRUCT* pSessionStruct = (SESSION_STRUCT *) hSessionHandle;
 
+    if(g_iInitFlg == 1)
+    {
+        return TCP_CommunicateHsm(pucCmd, iCmdLen, pucRsp, piRspLen);
+    }
+
     if(pucRsp == NULL)
     {
         LOG_ERROR("pucRsp = [%s] is invalid.", "NULL");
@@ -867,7 +873,7 @@ int TCP_CommunicateHsm_ex(void *hSessionHandle, unsigned char *pucCmd, int iCmdL
 }
 
 /***************************************************************************
-* Subroutine: Tass_OpenDevice
+* Subroutine: SDF_OpenDevie
 * Function:   打开设备句柄
 * Input:
 *    @pphDeviceHandle    设备句柄
@@ -884,7 +890,7 @@ int TCP_CommunicateHsm_ex(void *hSessionHandle, unsigned char *pucCmd, int iCmdL
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLen)
+int SDF_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLen)
 {
     int rv = HAR_OK;
     DEVICE_STRUCT *pstDevice = NULL;
@@ -930,7 +936,7 @@ int Tass_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadL
 }
 
 /***************************************************************************
-* Subroutine: Tass_CloseDevice
+* Subroutine: SDF_CloseDevice 
 * Function:   关闭设备句柄
 * Input:
 *    @phDeviceHandle    设备句柄
@@ -944,7 +950,7 @@ int Tass_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadL
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_CloseDevice(void *phDeviceHandle)
+int SDF_CloseDevice(void *phDeviceHandle)
 {
     DEVICE_STRUCT *pstDevice = (DEVICE_STRUCT *)phDeviceHandle;
 
@@ -961,7 +967,7 @@ int Tass_CloseDevice(void *phDeviceHandle)
 }
 
 /***************************************************************************
-* Subroutine: Tass_OpenSession
+* Subroutine: SDF_OpenSession
 * Function:   打开会话句柄
 * Input:
 *    @phDeviceHandle      设备句柄
@@ -976,7 +982,7 @@ int Tass_CloseDevice(void *phDeviceHandle)
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_OpenSession(void *phDeviceHandle, void **pphSessionHandle)
+int SDF_OpenSession(void *phDeviceHandle, void **pphSessionHandle)
 {
     int rv = HAR_OK;
     DEVICE_STRUCT   *pstDevice = (DEVICE_STRUCT *)phDeviceHandle;
@@ -1012,7 +1018,7 @@ int Tass_OpenSession(void *phDeviceHandle, void **pphSessionHandle)
 }
 
 /***************************************************************************
-* Subroutine: Tass_CloseSession
+* Subroutine: SDF_CloseSession
 * Function:   关闭会话句柄
 * Input:
 *    @phSessionHandle    会话句柄
@@ -1026,7 +1032,7 @@ int Tass_OpenSession(void *phDeviceHandle, void **pphSessionHandle)
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int Tass_CloseSession(void *phSessionHandle)
+int SDF_CloseSession(void *phSessionHandle)
 {
     SESSION_STRUCT* pstSession = (SESSION_STRUCT *) phSessionHandle;
 

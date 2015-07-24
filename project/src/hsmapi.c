@@ -219,7 +219,7 @@ Tass_GenRSAKey(
 }
 
 /***************************************************************************
- * * Subroutine: Tass_PubKeyOper
+ * * Subroutine: Tass_PubKey_Oper
  * * Function:   RSA/SM2公钥加密运算接口
  * * Input:
  * *   @hSessionHandle  会话句柄
@@ -238,7 +238,7 @@ Tass_GenRSAKey(
  * * ModifyRecord:
  * * *************************************************************************/
 HSMAPI int 
-Tass_PubKeyOper(
+Tass_PubKey_Oper(
      void *hSessionHandle,
      int keytype,
      char *indata,
@@ -290,7 +290,7 @@ Tass_PubKeyOper(
 }
 
 /***************************************************************************
- * * Subroutine: Tass_DecryptOper
+ * * Subroutine: Tass_PRIVATE_Oper
  * * Function:   私钥解密运算接口。
  * * Input:
  * *   @hSessionHandle  会话句柄
@@ -308,7 +308,7 @@ Tass_PubKeyOper(
  * * ModifyRecord:
  * * *************************************************************************/
 HSMAPI int 
-Tass_DecryptOper(
+Tass_PRIVATE_Oper(
      void *hSessionHandle,
      int keytype,
      char *Rsa_LMK,
@@ -348,7 +348,7 @@ Tass_DecryptOper(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenerateRandom
+* Subroutine: Tass_GenRandData
 * Function:   产生随机数
 * Input:
 *   @hSessionHandle  会话句柄
@@ -363,7 +363,7 @@ Tass_DecryptOper(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
+Tass_GenRandData(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 {
     int     rv = HAR_OK;
     int     len = 0;
@@ -503,7 +503,7 @@ Tass_EncryptTrackData(
 } 
 
 /***************************************************************************
-* Subroutine: Tass_DisperZmk
+* Subroutine: Tass_Disper_Zmk
 * * Function:   由一个ZMK分散生成另外一个子密钥，并通过ZMK密钥加密保护导出
 * * Input:
 * *   @hSessionHandle  会话句柄
@@ -522,7 +522,7 @@ Tass_EncryptTrackData(
 * * ModifyRecord:
 ****************************************************************************/
 HSMAPI int
-Tass_DisperZmk(
+Tass_Disper_Zmk(
     void *hSessionHandle, 
     int iKeyIdx,
     char *pcKey_LMK,
@@ -544,16 +544,16 @@ Tass_DisperZmk(
     int iDstKeyDeriveNumber = strlen(pcDisData)/32;
     char pcCipherDstKey[128] ={0};
     char pcDstKeyCv[18] ={0};
-    //获取算法标识
     
     rv = HSM_IC_ExportCipherKey(
     	hSessionHandle,
 	iEncryptMode,
-    	pcSrcKeyType, iKeyIdx, pcKey_LMK,
+    	pcSrcKeyType,
+        iKeyIdx, pcKey_LMK,
     	iSrcKeyDeriveNum, "",
-    	0,
-	 "",
-    	pcDstKeyType, 0, pcZmkKey_LMK,
+    	0, "",/*会话密钥*/
+    	pcDstKeyType,
+        0, pcZmkKey_LMK,
     	iDstKeyDeriveNumber, pcDisData,
     	"",
     	pcZmk_ZMK/*out*/, pcDstKeyCv/*out*/);
@@ -563,18 +563,19 @@ Tass_DisperZmk(
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
         return rv;
     }
-    printf("%s\n",pcCipherDstKey );
 	printf("zmd index = %d\n", iZmkIdx);
 	printf("zmk cipher = %s\n", pcZmk_LMK);
+        printf("pcZmkKey_LMK = %s\n", pcZmkKey_LMK);
+        printf("pcZmk_ZMK = %s\n", pcZmk_ZMK);
     rv = HSM_RCL_ImportKey_A6(
     	hSessionHandle,
     	"000",
 	 iZmkIdx,
 	 pcZmkKey_LMK,
-    	 pcZmkKey_LMK,
-	 'X',
+         pcZmk_ZMK,
+	 'Z',
 	 'N',
-    	0,
+    	  0,
 	 "",
 	 pcZmk_LMK,
     	pcZmkCv/*OUT*/);
@@ -1606,7 +1607,7 @@ Tass_GenVerifyCvn(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenANSIMac
+* Subroutine: Tass_Gen_ANSI_Mac
 * Function:   产生ANSIX9.19MAC
 * Input:
 *   @hSessionHandle     会话句柄
@@ -1624,7 +1625,7 @@ Tass_GenVerifyCvn(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenANSIMac(
+Tass_Gen_ANSI_Mac(
         void    *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -2080,7 +2081,7 @@ Tass_EncryptPIN(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenerateZmk
+* Subroutine: Tass_Generate_Zmk
 * Function:   随机生成ZMK
 * Input:
 *   @hSessionHandle      会话句柄
@@ -2099,7 +2100,7 @@ Tass_EncryptPIN(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateZmk(
+Tass_Generate_Zmk(
         void *hSessionHandle,
         int iKeyIdx,
         char *pcKeyCipherByLmk,
@@ -2168,7 +2169,7 @@ Tass_GenerateZmk(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GeneratePik
+* Subroutine: Tass_Generate_Pik
 * Function:   随机生成PIK
 * Input:
 *   @hSessionHandle      会话句柄
@@ -2187,7 +2188,7 @@ Tass_GenerateZmk(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GeneratePik(
+Tass_Generate_Pik(
         void *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -2345,7 +2346,7 @@ Tass_GenerateMak(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenerateZek
+* Subroutine: Tass_Generate_Zek
 * Function:   随机生成ZEK
 * Input:
 *   @iKeyIdx             密钥索引
@@ -2363,7 +2364,7 @@ Tass_GenerateMak(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateZek(
+Tass_Generate_Zek(
         void *hSessionHandle,
         int  iKeyIdx,
         char *pcKeyCipherByLmk,
@@ -2965,7 +2966,7 @@ Tass_DecryptData(
 }
 
 /***************************************************************************
-* Subroutine: Tass_DecryptPIN
+* Subroutine: Tass_Decrypt_PIN
 * Function:   解密PIN
 * Input:
 *   @iKeyIdx             密钥索引
@@ -2983,7 +2984,7 @@ Tass_DecryptData(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_DecryptPIN(
+Tass_Decrypt_PIN(
         void    *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,

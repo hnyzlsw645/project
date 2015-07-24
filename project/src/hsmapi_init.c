@@ -235,6 +235,8 @@ int Tass_HsmApiInit(char *pcConfigFilePath)
     rv = GetKeyValue(szConfigFile, "host2", szValue);
     if (rv)
     {
+        g_iInitFlg = 1;
+        printf("============> [tass hsm api] init success!\r\n\r\n");
         return 0;
     }
 
@@ -255,6 +257,8 @@ int Tass_HsmApiInit(char *pcConfigFilePath)
     g_iPort2 = atoi(szValue);
 
     g_iInitFlg = 1;
+    printf("============> [tass hsm api] init success!\r\n\r\n");
+
     return rv;
 }
 
