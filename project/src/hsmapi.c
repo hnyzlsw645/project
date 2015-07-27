@@ -348,7 +348,7 @@ Tass_PRIVATE_Oper(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenRandData
+* Subroutine: Tass_GenerateRandom
 * Function:   产生随机数
 * Input:
 *   @hSessionHandle  会话句柄
@@ -363,7 +363,7 @@ Tass_PRIVATE_Oper(
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenRandData(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
+Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 {
     int     rv = HAR_OK;
     int     len = 0;
@@ -533,8 +533,13 @@ Tass_Disper_Zmk(
     char *pcZmk_LMK/*out*/, 
     char *pcZmkCv/*out*/)
 {
-    int     rv = HAR_OK;
-    int     len = 0;
+    int  rv = HAR_OK;
+    int  len = 0;
+    if(strlen(pcDisData)%2 != 0)
+       {
+         LOG_ERROR("Param pcDisData length is error",rv,rv);
+         return rv;
+       }   
     int iEncryptMode = 0;
     char pcSrcKeyType[4] = "000";
     int iSrcKeyDeriveNum = 0;
@@ -563,6 +568,20 @@ Tass_Disper_Zmk(
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
         return rv;
     }
+    unsigned char pcZmk_ZMK_1[128] = {0};
+    unsigned char *p = pcZmk_ZMK_1;
+    if(strlen(pcZmk_ZMK)/16 < 1)
+    {
+      LOG_ERROR("Tass hsm api return code = [%d],[%#010X].",rv,rv);
+      return rv;
+    }
+    if(strlen(pcZmk_ZMK)/32 >= 1)
+    {
+      *p ++ = 'X';
+       memcpy(p, pcZmk_ZMK,strlen(pcZmk_ZMK));
+       pcZmk_ZMK = pcZmk_ZMK_1;
+    }
+    
 	printf("zmd index = %d\n", iZmkIdx);
 	printf("zmk cipher = %s\n", pcZmk_LMK);
         printf("pcZmkKey_LMK = %s\n", pcZmkKey_LMK);
@@ -573,7 +592,7 @@ Tass_Disper_Zmk(
 	 iZmkIdx,
 	 pcZmkKey_LMK,
          pcZmk_ZMK,
-	 'Z',
+	 strlen(pcZmk_ZMK)/16>=2 ? 'X':'Z',
 	 'N',
     	  0,
 	 "",

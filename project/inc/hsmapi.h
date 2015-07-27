@@ -112,7 +112,7 @@ int SDF_OpenSession(void *phDeviceHandle, void **pphSessionHandle);
 int SDF_CloseSession(void *phSessionHandle);
 
 /***************************************************************************
-* Subroutine: Tass_GenRanData 
+* Subroutine: Tass_GenerateRandom 
 * Function:   产生随机数
 * Input:
 *   @hSessionHandle  会话句柄
@@ -127,7 +127,7 @@ int SDF_CloseSession(void *phSessionHandle);
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenRandData(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
+Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
 
 /***************************************************************************
 * Subroutine: Tass_Gen_ANSI_Mac

@@ -15,7 +15,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = Tass_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
+    rv = SDF_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);
@@ -27,11 +27,11 @@ int main(void)
     }
 
     //打开会话句柄
-    rv = Tass_OpenSession(phDeviceHandle, &phSessionHandle);
+    rv = SDF_OpenSession(phDeviceHandle, &phSessionHandle);
     if(rv)
     {
         printf("Open session failed, return code = [%#010X]\n", rv);
-        Tass_CloseDevice(phDeviceHandle);
+        SDF_CloseDevice(phDeviceHandle);
         return rv;
     }
     else
@@ -168,7 +168,7 @@ int main(void)
     char pcPinBlk[22+1] = "xa10221134657568426499";
     char pcPan[13+1] = "123456789012";
     char pcPinText[128+1] = {0};
-    rv =  Tass_DecryptPIN(
+    rv =  Tass_Decrypt_PIN(
         phSessionHandle,
         iKeyIdx,
         pcKeyCipherByLmk,
@@ -181,7 +181,7 @@ int main(void)
       printf("return code = [%#010X].\n",rv);
     }
       printf("pcPinText = [%s]\n",pcZekZmk);
-    printf("\n=====================ZMK密钥分散生成ZMK密钥，并用ZMK加密保护导出=====================================\n");
+ //   printf("\n=====================ZMK密钥分散生成ZMK密钥，并用ZMK加密保护导出=====================================\n");
 
     
     int iZmkIdx = 0;
@@ -190,7 +190,8 @@ int main(void)
     char pcZmkKey_LMK[128] = "X801617441513A2F135AB14EAAD1069DF";
     char pcZmk_Lmk[128] = {};
     char pcZmk_Zmk[128] = {};
-    rv = Tass_DisperZmk(
+#if 0    
+rv = Tass_Disper_Zmk(
       phSessionHandle,
       iKeyIdx,
       pcZmkKey_LMK,
@@ -200,14 +201,27 @@ int main(void)
       pcZmk_Zmk,
       pcZmk_Lmk,
       pcZmkCv 
-      );
-   if(rv)
+      ); 
+rv = Tass_Disper_Zmk(
+       phSessionHandle,
+       iKeyIdx,
+       "35AB14EAAD1069DF",
+       "",
+       0,
+       "35AB14EAAD1069DF",
+       pcZmk_Zmk,
+       pcZmk_Lmk,
+       pcZmkCv
+       );
+ 
+ if(rv)
    {
      printf("return code = [%#010X].\n",rv);
    }
      printf("pcZmk_Zmk = [%s]\n",pcZmk_Zmk);
      printf("pcZmk_Lmk = [%s]\n",pcZmk_Lmk);
      printf("pcZmkCv = [%s]\n",pcZmkCv);
+#endif
 #if 0
    printf("\n================================磁道加密==========================================================\n");
      char pcTrackText[] = "801617441513A2F135AB14EAAD1069DF";
@@ -368,10 +382,10 @@ int main(void)
 #endif
 
     //关闭会话句柄
-    Tass_CloseSession(phSessionHandle);
+    SDF_CloseSession(phSessionHandle);
 
     //关闭设备句柄
-    Tass_CloseDevice(phDeviceHandle);
+    SDF_CloseDevice(phDeviceHandle);
 
     return 0;
 }
