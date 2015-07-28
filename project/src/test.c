@@ -15,7 +15,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = SDF_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
+    rv = SDF_OpenDevice(&phDeviceHandle, "124.127.49.180", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);

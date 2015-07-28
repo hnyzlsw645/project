@@ -195,7 +195,7 @@ Tass_GenRSAKey(
   //Ω‚√‹Der±‡¬Î
   int Rsa_N_Len = 0;
   int Rsa_E_Len = 0;
-  printf("pucDerPublicKey = %x \n", *pucDerPublicKey); 
+  printf("pucDerPublicKey = %02x \n", *pucDerPublicKey); 
   Tools_PrintBuf("pucDerPublicKey",pucDerPublicKey,piDerPublicKeyLen);
   int len = Tools_ConvertByte2HexStr(pucDerPublicKey,strlen(pucDerPublicKey),pucDerPublicKey);
   printf("pucDerPublicKey = %x \n", pucDerPublicKey);
