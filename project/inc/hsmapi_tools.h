@@ -513,7 +513,29 @@ int Tools_CheckPaddingModeValidity(int iPaddingMode);
  * * ModifyRecord:
  * * *************************************************************************/
 int Tools_Der(char *N, char *E, unsigned char *pubkeyDer,int *pubkeyDerLen);
-
+/***************************************************************************
+ * Subroutine: Tools_DDer
+ * Function:   对Der编码的公钥解码，生成模和指数
+ * Input:
+ *   @pubkeyDer      Der编码
+ *   @pubkeyDerLen   Der长
+ * Output
+ *   @ppmodulus      模
+ *   @modulusLen     模长
+ *   @pppubExp       指数
+ *   @pubExpLen      指数长度
+ * Output:
+ *   @pubkeyDer   公钥
+ *
+ * Return:       成功返回0， 失败返回其他
+ * Description:
+ *
+ * Date:         2015.06.08
+ * Author:       Luo Cangjian
+ * ModifyRecord:
+ *************************************************************************/
+int Tools_DDer(unsigned char *pubkeyDer, unsigned char *ppmodulus,
+               int *modulusLen, unsigned char *pppubExp, int *pubExpLen);
 
 #ifdef __cplusplus
 }

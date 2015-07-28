@@ -1246,7 +1246,7 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     /*** 公钥编码类型, 2N, 01-ASN.1 格式DER 编码的公钥。整数使用2的补码表示法 ***/
     *p ++ = '0';
     *p ++ = '1';
-
+#if 0
     /*** 公钥指数长度, 4N, 字节数/位数（TODO） ***/
     TASS_SPRINTF((char*)p, 5, "%04d", 4);
     p += 4;
@@ -1254,7 +1254,7 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     /*** 公钥指数, nB ***/
     Tools_ConvertUint2Ucbuf(iPubE, p);
     p += 4;
-
+#endif
     /*** 内部存储的密钥, 密钥索引、标签长度、标签 ***/
     rv = Tools_AddFieldSavedKey(iKeyIndex, pcKeyLabel, (char*)p);
     if(rv == HAR_PARAM_VALUE)

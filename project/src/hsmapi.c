@@ -125,68 +125,88 @@ Tass_DeriveKeyExportedByRsa(
 
 
 /***************************************************************************
- * * Subroutine: Tass_GenRSAKey
- * * Function:   随机生成RSA密钥对，并使用ZMK加密导出
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @RsaLen          Rsa密钥长度
- * *   @zmkIndex
- * *   @zmk_Lmk
- * *   @zmk_disData
- * *   @mode
- * * Output:
- * *   @Rsa_D_ZMK
- * *   @Rsa_P_ZMK
- * *   @Rsa_Q_ZMK
- * *   @Rsa_DP_ZMK
- * *   @Rsa_DQ_ZMK
- * *   @Rsa_QINV_ZMK
- * *   @Rsa_N
- * *   @Rsa_E
- * *   @Rsa_LMK*
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
+ * Subroutine: Tass_GenRSAKey
+ * Function:   随机生成RSA密钥对，并使用ZMK加密导出
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @RsaLen          Rsa密钥长度
+ *   @zmkIndex
+ *   @zmk_Lmk
+ *   @zmk_disData
+ *   @mode
+ * Output:
+ *   @Rsa_D_ZMK
+ *   @Rsa_P_ZMK
+ *   @Rsa_Q_ZMK
+ *   @Rsa_DP_ZMK
+ *   @Rsa_DQ_ZMK
+ *   @Rsa_QINV_ZMK
+ *   @Rsa_N
+ *   @Rsa_E
+ *   @Rsa_LMK*
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
  * * Date:         2015.06.05
  * * ModifyRecord:
  * * *************************************************************************/
 HSMAPI int 
 Tass_GenRSAKey(
-     void *hSessionHandle,
-     int RsaLen,
-     int zmkIndex,
-     char *zmk_Lmk,
-     char *zmk_disData,
-     int mode,
-     char *Rsa_D_ZMK/*out*/,
-     char *Rsa_P_ZMK/*out*/,
-     char *Rsa_Q_ZMK/*out*/,
-     char Rsa_DP_ZMK/*out*/,
-     char *Rsa_DQ_ZMK/*out*/,
-     char *Rsa_QINV_ZMK/*out*/,
-     char *Rsa_N/*out*/,
-     char *Rsa_E/*out*/,
-     char *Rsa_LMK/*out*/)
+      void *hSessionHandle,
+      int RsaLen,
+      int zmkIndex,
+      char *zmk_Lmk,
+      char *zmk_disData,
+      int mode,
+      char *Rsa_D_ZMK/*out*/,
+      char *Rsa_P_ZMK/*out*/,
+      char *Rsa_Q_ZMK/*out*/,
+      char Rsa_DP_ZMK/*out*/,
+      char *Rsa_DQ_ZMK/*out*/,
+      char *Rsa_QINV_ZMK/*out*/,
+      char *Rsa_N/*out*/,
+      char *Rsa_E/*out*/,
+      char *Rsa_LMK/*out*/)
 {
     int rv = HAR_OK;
+    
     unsigned char pucDerPublicKey[512+32] = {0};
     int piDerPublicKeyLen = 0;
     unsigned char pucPrivateKey_Lmk[512+32] = {0};
     int piPrivateKeyLen_Lmk = 0;
-    int iModulusBits =1024 ;//rsa密钥模长，位数
-    //分散级数
-    int iTkDeriveNumber = strlen(zmk_disData)/32;
+   
+    int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
     
     rv = HSM_RSA_GenerateNewKeyPair(
            hSessionHandle,
-           9999,
-           "",
-           iModulusBits, 
-           RsaLen,
+           0,
+           NULL,
+           RsaLen, 
+           NULL,
            pucDerPublicKey/*out*/, 
            &piDerPublicKeyLen/*out*/,
            Rsa_LMK/*out*/, 
            &piPrivateKeyLen_Lmk/*out*/ );
+   if(rv)
+    {
+      LOG_ERROR("%s","GenerateNewKeyPair is error");
+      return rv;
+    }
+  //解密Der编码
+  int Rsa_N_Len = 0;
+  int Rsa_E_Len = 0;
+  printf("pucDerPublicKey = %x \n", *pucDerPublicKey); 
+  Tools_PrintBuf("pucDerPublicKey",pucDerPublicKey,piDerPublicKeyLen);
+  int len = Tools_ConvertByte2HexStr(pucDerPublicKey,strlen(pucDerPublicKey),pucDerPublicKey);
+  printf("pucDerPublicKey = %x \n", pucDerPublicKey);
+  rv =  Tools_DDer(pucDerPublicKey,Rsa_N,&Rsa_N_Len,Rsa_E,&Rsa_E_Len);
+    if(rv)
+     {
+       LOG_ERROR("%s","pucDerPublicKey Convert is error");
+       return rv;
+     }
+  printf("RSA_N = %s\n",Rsa_N);
+  printf("RSA_E = %s\n",Rsa_E);
      unsigned char *piDerPublicKey[2048] = {0};
      int piPublicKey_mLen = 0;
      int piPublicKey_eLen = 0;

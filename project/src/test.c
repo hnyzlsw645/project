@@ -279,6 +279,7 @@ rv = Tass_Disper_Zmk(
         printf("return code = [%#010X].\n",rv);
        }   
         printf("outdata = [%s]\n",outdata);
+#endif
 
     printf("\n================================测试der编码==========================================================\n");
     //对RSA公钥的模、指数序列做DER编码
@@ -296,7 +297,7 @@ rv = Tass_Disper_Zmk(
    Tools_PrintBuf("public key\n", pubkeyDer, pubkeyDerLen+8);
    Tools_PrintBuf("public key\n", pubkeyDer);
    Tools_PrintBuf("public keyLen\n","--",pubkeyDerLen);   
-
+#if 0
    printf("\n================================RSA/SM2公钥加密==========================================================\n");
              
 
@@ -314,7 +315,7 @@ rv = Tass_Disper_Zmk(
         printf("return code = [%#010X].\n",rv);
        }   
         printf("outdata1 = [%s]\n",outdata1);
-
+#endif
 
    printf("\n================================随机生成RSA密钥==========================================================\n");
        char zmkDisData[33] = "00000000000000000000000000000000";
@@ -379,9 +380,44 @@ rv = Tass_Disper_Zmk(
         printf("SM2_D_ZMK = [%s]\n",SM2_D_ZMK);
         printf("SM2_PUBKEY = [%s]\n",SM2_PUBKEY);
         printf("SM2_LMK = [%s]\n",SM2_LMK);
-#endif
+#if 0
+printf("==========================解密DER=================================\n");
+        char derdata[1024] = "30818902818100C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB739ECF4EB7234046BAEBBF8E5576EBD4E592D8D6AB592569D7E274E61A6277518134B35D161C18266126D4520F9D45DF85FAE97FBE78AC0F48C348BA06C8C1FBD30203010001";
+     unsigned char derdata1[1024] = {0};     
+     int len = Tools_ConvertHexStr2Byte(derdata,strlen(derdata),derdata1);
+     unsigned char ppmodulus[1024] = {0};
+     unsigned char pppubExp[1024] = {0};
+     int modulusLen = 0;
+     int pubExpLen = 0; 
 
-    //关闭会话句柄
+	unsigned char *pE = NULL;
+	unsigned char *pM = NULL;
+ 
+     rv = DDer_Pubkey_Pkcs1(
+               derdata1, len,
+               &pM,&modulusLen,
+               &pE,&pubExpLen
+              );
+    
+   rv = Tools_DDer(
+          derdata,
+          ppmodulus,&modulusLen,
+          pppubExp,&pubExpLen
+             );
+     if(rv)
+     {
+	printf("return code = [%#010X].", rv);
+	return 0;
+     }
+printf("ppmodulus = [%s]\n",ppmodulus);
+printf("pppubExp = [%s]\n",pppubExp);
+ 
+        Tools_PrintBuf("ppmodulus_tool",ppmodulus,modulusLen);
+        Tools_PrintBuf("pppubExp_tool",pppubExp,modulusLen);
+	Tools_PrintBuf("ppmodulus", pM, modulusLen);
+	Tools_PrintBuf("pppubExp", pE, pubExpLen);
+#endif
+//关闭会话句柄
     SDF_CloseSession(phSessionHandle);
 
     //关闭设备句柄
