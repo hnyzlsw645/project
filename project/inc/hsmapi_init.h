@@ -61,7 +61,7 @@ int GetKeyValue(char *pcFileName, char *pcKeyName, char *pcKeyValue);
 * Date:         2015.05.29
 * ModifyRecord:
 * *************************************************************************/
-int Tass_HsmApiInit(char *pcConfigFilePath);
+//int Tass_HsmApiInit(char *pcConfigFilePath);
 
 /***************************************************************************
 * Subroutine: Tass_HsmApiInitByContent

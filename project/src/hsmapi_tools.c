@@ -1349,3 +1349,25 @@ pubExpLen = Tools_ConvertByte2HexStr(pE,pubExpLen,pppubExp);
 //printf("_+_+_+_+:%s\n",pppubExp);
    return rv;
 }
+
+/***************************************************************************
+* Subroutine: Tools_ReadBuf
+* Function:   按十六进制读取缓存区数据
+* Input:
+*   @pucDst   待读取的数据
+* Output:
+*   @BufData  读取到的数据（十六进制）
+* 
+* Return:     返回BufData的长度
+* Description:
+* Date:         2015.05.22
+* Author:       Luo Cangjian
+* ModifyRecord:
+* *************************************************************************/
+int Tools_ReadBuf(unsigned char *pucBuf, int iBufLen, unsigned char *BufData/*out*/)
+{
+    Tools_ConvertByte2HexStr(pucBuf,iBufLen,BufData);
+    return strlen(BufData);
+}
+
+

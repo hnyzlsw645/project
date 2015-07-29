@@ -57,11 +57,14 @@ Tass_GenSm2Key(
      int rv = HAR_OK;
      int piDerPublicKeyLen = 0;
      int piPrivateKeyLen_Lmk = 0;
-     rv = HSM_SM2_GenerateNewKeyPair(
+     char SM2PUBKEY[512] = {0};
+     char SM2LMK[512] = {0};
+     char SM2DZMK[512] = {0};
+  rv = HSM_SM2_GenerateNewKeyPair(
               hSessionHandle,
               9999, "",
-              SM2_PUBKEY, &piDerPublicKeyLen,
-              SM2_LMK,  &piPrivateKeyLen_Lmk );
+              SM2PUBKEY, &piDerPublicKeyLen,
+              SM2LMK,  &piPrivateKeyLen_Lmk );
      int piPrivateKeyLen_Tk = 0;
      rv = HSM_SM2_ExportByTK(
               hSessionHandle,mode,
@@ -69,9 +72,12 @@ Tass_GenSm2Key(
                0, zmk_Lmk,
                strlen(zmk_disData)/32, zmk_disData,
                0,/*要被导出的sm2索引*/
-               SM2_PUBKEY, piDerPublicKeyLen,
-               SM2_LMK, piPrivateKeyLen_Lmk,
-               SM2_D_ZMK, &piPrivateKeyLen_Tk/*out*/ );
+               SM2PUBKEY, piDerPublicKeyLen,
+               SM2LMK, piPrivateKeyLen_Lmk,
+               SM2DZMK, &piPrivateKeyLen_Tk/*out*/ );
+    int len = Tools_ConvertByte2HexStr(SM2PUBKEY,piDerPublicKeyLen,SM2_PUBKEY);
+    len = Tools_ConvertByte2HexStr(SM2LMK,strlen(SM2LMK),SM2_LMK);
+    len = Tools_ConvertByte2HexStr(SM2DZMK,strlen(SM2DZMK),SM2_D_ZMK);
    return rv;
 
 }
@@ -161,7 +167,7 @@ Tass_GenRSAKey(
       char *Rsa_D_ZMK/*out*/,
       char *Rsa_P_ZMK/*out*/,
       char *Rsa_Q_ZMK/*out*/,
-      char Rsa_DP_ZMK/*out*/,
+      char *Rsa_DP_ZMK/*out*/,
       char *Rsa_DQ_ZMK/*out*/,
       char *Rsa_QINV_ZMK/*out*/,
       char *Rsa_N/*out*/,
@@ -171,6 +177,8 @@ Tass_GenRSAKey(
     int rv = HAR_OK;
     
     unsigned char pucDerPublicKey[512+32] = {0};
+    char szDerPubKeyHex[512] = {0};
+
     int piDerPublicKeyLen = 0;
     unsigned char pucPrivateKey_Lmk[512+32] = {0};
     int piPrivateKeyLen_Lmk = 0;
@@ -192,21 +200,21 @@ Tass_GenRSAKey(
       LOG_ERROR("%s","GenerateNewKeyPair is error");
       return rv;
     }
-  //解密Der编码
-  int Rsa_N_Len = 0;
-  int Rsa_E_Len = 0;
-  printf("pucDerPublicKey = %02x \n", *pucDerPublicKey); 
-  Tools_PrintBuf("pucDerPublicKey",pucDerPublicKey,piDerPublicKeyLen);
-  int len = Tools_ConvertByte2HexStr(pucDerPublicKey,strlen(pucDerPublicKey),pucDerPublicKey);
-  printf("pucDerPublicKey = %x \n", pucDerPublicKey);
-  rv =  Tools_DDer(pucDerPublicKey,Rsa_N,&Rsa_N_Len,Rsa_E,&Rsa_E_Len);
-    if(rv)
-     {
-       LOG_ERROR("%s","pucDerPublicKey Convert is error");
-       return rv;
-     }
-  printf("RSA_N = %s\n",Rsa_N);
-  printf("RSA_E = %s\n",Rsa_E);
+	 //解密Der编码
+ 	int Rsa_N_Len = 0;
+  	int Rsa_E_Len = 0;
+  	unsigned char OutBuf[1024] = {0};
+        int len = Tools_ConvertByte2HexStr(pucDerPublicKey,piDerPublicKeyLen, szDerPubKeyHex);
+       // printf("======pucDerPublicKey = %s \n", szDerPubKeyHex);
+        rv =  Tools_DDer(szDerPubKeyHex,Rsa_N,&Rsa_N_Len,Rsa_E,&Rsa_E_Len);
+        if(rv)
+        {
+           LOG_ERROR("%s","pucDerPublicKey Convert is error");
+           return rv;
+        }
+       //   Tools_PrintBuf("privateKey",Rsa_LMK,piPrivateKeyLen_Lmk);
+       //   printf("RSA_N = %s\n",Rsa_N);
+       //   printf("RSA_E = %s\n",Rsa_E);
      unsigned char *piDerPublicKey[2048] = {0};
      int piPublicKey_mLen = 0;
      int piPublicKey_eLen = 0;
@@ -216,25 +224,32 @@ Tass_GenRSAKey(
      int piPrivateKey_dpLen = 0;
      int piPrivateKey_dqLen = 0;
      int piPrivateKey_qInvLen = 0;
-   rv = HSM_RSA_ExportRSAKey(
+     char Rsa_N_m[512] = {0};//公钥
+     char Rsa_E_m[512] = {0};//指数
+	 rv = HSM_RSA_ExportRSAKey(
                hSessionHandle,
                mode,  "000",
-               zmkIndex, zmk_Lmk,
+               0, zmk_Lmk,
                iTkDeriveNumber, zmk_disData,
-               9999,
-               Rsa_LMK, piPrivateKeyLen_Lmk,
-               "", "",
-               NULL, "",
+               0,
+               Rsa_LMK/*被导出私钥数据*/, piPrivateKeyLen_Lmk/*私钥长度*/,
+               ""/*拓展标识*/, "",/*PAD标识*/
+               1/*公钥输出格式，1为DER编码(模 、指数序列)*/,
+  	       "",/*初始化向量*/
                piDerPublicKey/*OUT*/, &piDerPublicKeyLen/*OUT*/,
-               Rsa_N/*OUT*/, &piPublicKey_mLen/*OUT*/,
-               Rsa_E/*OUT*/, &piPublicKey_eLen/*OUT*/,
+               Rsa_N_m/*OUT*/, &piPublicKey_mLen/*OUT*/,
+               Rsa_E_m/*OUT*/, &piPublicKey_eLen/*OUT*/,
                Rsa_DQ_ZMK/*OUT*/, &piPrivateKey_dLen/*OUT*/,
                Rsa_P_ZMK/*OUT*/, &piPrivateKey_pLen/*OUT*/,
                Rsa_Q_ZMK/*OUT*/, &piPrivateKey_qLen/*OUT*/,
                Rsa_DP_ZMK/*OUT*/, &piPrivateKey_dpLen/*OUT*/,
                Rsa_DQ_ZMK/*OUT*/, &piPrivateKey_dqLen/*OUT*/,
                Rsa_QINV_ZMK/*OUT*/, &piPrivateKey_qInvLen/*OUT*/);   
-
+   if(rv)
+    {
+      LOG_ERROR("%s","Hsmapi ExportRSAKey is error");
+      return rv;
+    }
     return rv; 
 }
 
@@ -574,11 +589,11 @@ Tass_Disper_Zmk(
     	hSessionHandle,
 	iEncryptMode,
     	pcSrcKeyType,
-        iKeyIdx, pcKey_LMK,
+        iKeyIdx, pcKey_LMK,	/*** 保护密钥 ***/
     	iSrcKeyDeriveNum, "",
-    	0, "",/*会话密钥*/
+    	iZmkIdx, "",/*会话密钥*/
     	pcDstKeyType,
-        0, pcZmkKey_LMK,
+        0, pcZmkKey_LMK, /*** 待导出的密钥 ***/
     	iDstKeyDeriveNumber, pcDisData,
     	"",
     	pcZmk_ZMK/*out*/, pcDstKeyCv/*out*/);

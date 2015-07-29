@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /***************************************************************************
- * Subroutine: Tass_HsmApiInit
+ * Subroutine: SDF_HsmApiInit
  * Function:   通过指定配置文件的方式初始化接口
  * Input:
  *    @pcConfigFilePath      配置文件路径
@@ -37,7 +37,7 @@ extern "C" {
  * Date:         2015.05.29
  * ModifyRecord:
  ***************************************************************************/
-int Tass_HsmApiInit(char *pcConfigFilePath);
+int SDF_HsmApiInit(char *pcConfigFilePath);
 
 /***************************************************************************
 * Subroutine: SDF_OpenDevice
@@ -133,15 +133,15 @@ Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 * Subroutine: Tass_Gen_ANSI_Mac
 * Function:   产生ANSIX9.19MAC
 * Input:
-*   @iKeyIdx            密钥索引
-*   pcKeyCipherByLmk    密钥密文，仅当索引值为0时该参数有效
-*   iInDataLen          计算MAC值的数据长度
-*   pcInData            计算MAC值的数据
+*   @iKeyIdx             密钥索引
+*   @pcKeyCipherByLmk    密钥密文，仅当索引值为0时该参数有效
+*   @iInDataLen          计算MAC值的数据长度
+*   @pcInData            计算MAC值的数据
 * Output:
-*   @pcMac              MAC值
+*   @pcMac               MAC值
 *
 * Return:       成功返回0，其他表示失败
-* Description: 根据输入的MAC数据采用标准的ANSIX9.19算法产生MAC
+* Description:  根据输入的MAC数据采用标准的ANSIX9.19算法产生MAC
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -298,24 +298,26 @@ Tass_Decrypt_PIN(
         char    *pcPinText/*out*/);
 
 /***************************************************************************
- * * Subroutine: Tass_Disper_Zmk
- * * Function:   由一个ZMK分散生成另外一个子密钥，并通过ZMK密钥加密保护导出
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @iKeyIdx         密钥索引
- * *   @pcKey_LMK       密钥密文
- * *   @pcDisData       分散参数
- * * Output:
- * *   @pcZmk_LMK       ZMK密文
- * *   @pcZmk_ZMK       ZMK保护分散的子密钥导出
- * *   @pcZmkCv         密钥校验值
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_Disper_Zmk
+ * Function:   由一个ZMK分散生成另外一个子密钥，并通过ZMK密钥加密保护导出
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @iKeyIdx         密钥索引
+ *   @pcKey_LMK       密钥密文
+ *   @pcDisData       分散参数
+ *   @iZmkIdx         导出密钥索引
+ *   @pcZmkKey_LMK    需要导出ZMK密钥密文
+ * Output:
+ *   @pcZmk_LMK       ZMK密文
+ *   @pcZmk_ZMK       ZMK保护分散的子密钥导出
+ *   @pcZmkCv         密钥校验值
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int
 Tass_Disper_Zmk(
     void *hSessionHandle, 
@@ -361,25 +363,26 @@ Tass_EncryptTrackData(
      char *pcTrackCipher/*out*/);
 
 /***************************************************************************
- * * Subroutine: Tass_DecryptTrackData
- * * Function:   使用ZEK解密磁道数据。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @iKeyIdx         密钥索引
- * *   @pcKey_LMK       密钥密文
- * *   @pcTrackText     磁道密文
- * *   @iTrackTextLen   磁道密文长度
- * *   @iAlgId          解密模式
- * *   @pcIV            初始化IV 
- * * Output:
- * *   @pcTrackCipher   磁道明文
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_DecryptTrackData
+ * Function:   使用ZEK解密磁道数据。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @iKeyIdx         ZEK密钥索引
+ *   @pcKey_LMK       ZEK密钥密文
+ *   @pcTrackText     磁道密文
+ *   @iTrackTextLen   磁道密文长度
+ *   @iAlgId          解密模式
+ *   @iPadFlg         数据填充标识
+ *   @pcIV            初始化IV 
+ * Output:
+ *   @pcTrackCipher   磁道明文
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_DecryptTrackData(
      void *hSessionHandle,
@@ -454,21 +457,21 @@ Tass_PubKey_Oper(
  * Function:   随机生成RSA密钥对，并使用ZMK加密导出
  * Input:
  *   @hSessionHandle  会话句柄
- *   @RsaLen          Rsa密钥长度
- *   @zmkIndex
- *   @zmk_Lmk
- *   @zmk_disData
- *   @mode
+ *   @RsaLen          Rsa公钥模长
+ *   @zmkIndex        保护密钥索引
+ *   @zmk_Lmk         保护密钥密文
+ *   @zmk_disData     保护密钥的分散因子
+ *   @mode            加密算法模式，0：ECB  1：CBC
  * Output:
- *   @Rsa_D_ZMK
- *   @Rsa_P_ZMK
- *   @Rsa_Q_ZMK
- *   @Rsa_DP_ZMK
- *   @Rsa_DQ_ZMK
- *   @Rsa_QINV_ZMK
- *   @Rsa_N
- *   @Rsa_E
- *   @Rsa_LMK*
+ *   @Rsa_D_ZMK       私钥分量d密文
+ *   @Rsa_P_ZMK       私钥分量p密文
+ *   @Rsa_Q_ZMK       私钥分量q密文
+ *   @Rsa_DP_ZMK      私钥分量dp密文
+ *   @Rsa_DQ_ZMK      私钥分量dq密文
+ *   @Rsa_QINV_ZMK    私钥分量qinv密文
+ *   @Rsa_N           公钥模明文
+ *   @Rsa_E           公钥指数e明文
+ *   @Rsa_LMK*        RSA本地密文
  * Return:            成功返回0，其他表示失败
  * Description:
  * Author:       Luo Cangjian
@@ -486,7 +489,7 @@ Tass_GenRSAKey(
      char *Rsa_D_ZMK/*out*/,
      char *Rsa_P_ZMK/*out*/,
      char *Rsa_Q_ZMK/*out*/,
-     char Rsa_DP_ZMK/*out*/,
+     char *Rsa_DP_ZMK/*out*/,
      char *Rsa_DQ_ZMK/*out*/,
      char *Rsa_QINV_ZMK/*out*/,
      char *Rsa_N/*out*/,
@@ -500,7 +503,7 @@ Tass_GenRSAKey(
  *       @hSessionHandle         会话句柄
  *       @pcZmkCipher_Lmk        待分散的zmk
  *       @pcPublicKey            保护公钥，Der编码的RSA公钥
- *       @pcDisData              分散因子
+ *       @pcDisData              ZMK密钥的分散因子
  *     Output:
  *       @pcSubKeyCipher_TK      子密钥密文
  *       @pcSubKeyCipher_Lmk     LMK加密的子密钥密文
@@ -523,17 +526,17 @@ Tass_DeriveKeyExportedByRsa(
 
 /***************************************************************************
  *   Subroutine: Tass_GenSm2Key
- *   Function:   随机生成RSA密钥对，并使用ZMK加密导出
+ *   Function:   随机生成SM2密钥对，并使用ZMK加密导出
  *   Input:
  *     @hSessionHandle         会话句柄
  *     @zmkIndex               密钥索引
- *     @zmk_Lmk                保护RSA密钥分量的保护密钥
+ *     @zmk_Lmk                保护SM2密钥分量的保护密钥
  *     @zmk_disData            ZMK分散参数，NULL时不分散
  *     @mode                   加密算法模式
  *   Output:
- *     @SM2_D_ZMK       
- *     @SM2_PUBKEY
- *     @SM2_LMK
+ *     @SM2_D_ZMK              私钥分量D密文 
+ *     @SM2_PUBKEY             DER编码的公钥
+ *     @SM2_LMK                LMK加密的私钥
  *   Return:            成功返回0，其他表示失败
  *   Description:
  *   Author:       Luo Cangjian

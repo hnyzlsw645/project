@@ -137,7 +137,7 @@ int GetKeyValue(char *pcFileName, char *pcKeyName, char *pcKeyValue)
 }
 
 /***************************************************************************
-* Subroutine: Tass_HsmApiInit
+* Subroutine: SDF_HsmApiInit
 * Function:   通过接口指定配置信息的方式初始化接口
 * Input:
 *    @pcConfigFilePath      配置文件路径
@@ -151,7 +151,7 @@ int GetKeyValue(char *pcFileName, char *pcKeyName, char *pcKeyValue)
 * Date:         2015.05.29
 * ModifyRecord:
 * *************************************************************************/
-int Tass_HsmApiInit(char *pcConfigFilePath)
+int SDF_HsmApiInit(char *pcConfigFilePath)
 {
     int  rv = HAR_OK;
     char szValue[128] = {0};

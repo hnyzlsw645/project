@@ -2152,6 +2152,10 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
 
     if(iRsaKeyIndex == 9999)
     {
+	/*** 被导出的RSA私钥字节数 ***/
+    	TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen);
+    	p += 4;
+
         /*** 被导出的RSA私钥, nB ***/
         memcpy(p, pucPrivateKey, iPrivateKeyLen);
         p += iPrivateKeyLen;

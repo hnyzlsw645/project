@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "hsmapi.h"
-#include "hsmapi_init.h"
 
 int main(void)
 {
@@ -15,7 +14,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = SDF_OpenDevice(&phDeviceHandle, "124.127.49.180", 8018, 8);
+    rv = SDF_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);
@@ -323,7 +322,7 @@ rv = Tass_Disper_Zmk(
       char Rsa_D_ZMK[1024] = {0};
       char Rsa_P_ZMK[1024]= {0};
      char Rsa_Q_ZMK[1024] = {0};
-     char *Rsa_DP_ZMK = '0';
+     char Rsa_DP_ZMK[1024] = {0};
      char Rsa_DQ_ZMK[1024] = {0};
      char Rsa_QINV_ZMK[1024] = {0};
      char Rsa_N[1024] = {0};
@@ -332,7 +331,7 @@ rv = Tass_Disper_Zmk(
       rv = Tass_GenRSAKey(
                 phSessionHandle,
                 1024,
-                9999,
+                0,
                 pcZmkKey_LMK,
                 zmkDisData ,
                 0 ,
@@ -377,6 +376,11 @@ rv = Tass_Disper_Zmk(
        {
         printf("return code = [%#010X].\n",rv);
        }
+#if 0 
+        Tools_PrintBuf("SM2_D_ZMK",SM2_D_ZMK,strlen(SM2_D_ZMK));
+        Tools_PrintBuf("SM2_PUBKEY",SM2_PUBKEY,strlen(SM2_PUBKEY));
+        Tools_PrintBuf("SM2_D_ZMK",SM2_LMK,strlen(SM2_LMK));
+#endif
         printf("SM2_D_ZMK = [%s]\n",SM2_D_ZMK);
         printf("SM2_PUBKEY = [%s]\n",SM2_PUBKEY);
         printf("SM2_LMK = [%s]\n",SM2_LMK);
