@@ -161,7 +161,7 @@ int main(void)
       printf("pkZekLmk = [%s]\n",pcZekLmk);
       printf("pkZekCv = [%s]\n",pcZekCv);
 
-#endif
+
    printf("\n================================解密pin==========================================================\n"); 
    //解密pin
     char pcPinBlk[22+1] = "xa10221134657568426499";
@@ -180,6 +180,7 @@ int main(void)
       printf("return code = [%#010X].\n",rv);
     }
       printf("pcPinText = [%s]\n",pcZekZmk);
+#endif
  //   printf("\n=====================ZMK密钥分散生成ZMK密钥，并用ZMK加密保护导出=====================================\n");
 
     
@@ -259,16 +260,16 @@ rv = Tass_Disper_Zmk(
         printf("return code = [%#010X].\n",rv);
        }   
         printf("pcTrackText = [%s]\n",pcTrackText);
-
+#endif
      printf("\n================================RSA/SM2私钥解密==========================================================\n");
              
-       char indata[2048*2] = "B6A247544CC482A8497973D418D5C17DECC8B9DC3E723498FE8C7";
+       char indata[2048*2] = "B07A204291B7759F8921DDD2DC8CEEB2D065D3D61C3436245C2F3F2141B55739BC86A52DB2463AB6CE18A50E878FBCAC2CB045CDA325AABE9D338DA5F9708DF8F5701DE81115B77C7F9871022033354D7A38E0AF564931D3E17D0CBDFE4C267DEDFF3D9E06BD6A247544CC482A8497973D418D5C17DECC8B9DC3E723498FE8C7";
        char outdata[2048*2] = {};
        char Rsa_lmk[1024] = "801617441513A2F135AB14EAAD1069DF";
        char SM2_lmk[1024] = "801617441513A2F135AB14EAAD1069DF";
-       rv = Tass_DecryptOper(
+       rv = Tass_PRIVATE_Oper(
            phSessionHandle,
-           1,
+           0,
            Rsa_lmk,
            SM2_lmk,
            indata,
@@ -278,11 +279,11 @@ rv = Tass_Disper_Zmk(
         printf("return code = [%#010X].\n",rv);
        }   
         printf("outdata = [%s]\n",outdata);
-#endif
+#if 0
 
     printf("\n================================测试der编码==========================================================\n");
     //对RSA公钥的模、指数序列做DER编码
-    char N[512] = "00C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB739ECF4EB7234046BAEBBF8E5576EBD4E592D8D6AB592569D7E274E61A6277518134B35D161C18266126D4520F9D45DF85FAE97FBE78AC0F48C348BA06C8C1FBD3";
+    char N[512] = "C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB739ECF4EB7234046BAEBBF8E5576EBD4E592D8D6AB592569D7E274E61A6277518134B35D161C18266126D4520F9D45DF85FAE97FBE78AC0F48C348BA06C8C1FBD3";
     char E[12] = "010001";//指数，十六进制
     unsigned char pubkeyDer[512 + 32] = {0};
     int pubkeyDerLen = 512 + 32;
@@ -296,18 +297,18 @@ rv = Tass_Disper_Zmk(
    Tools_PrintBuf("public key\n", pubkeyDer, pubkeyDerLen+8);
    Tools_PrintBuf("public key\n", pubkeyDer);
    Tools_PrintBuf("public keyLen\n","--",pubkeyDerLen);   
-#if 0
-   printf("\n================================RSA/SM2公钥加密==========================================================\n");
-             
 
+   printf("\n================================RSA/SM2公钥加密==========================================================\n");
+       char indata[512] = "C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB700C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB7";      
+       char sm2pubDerKey[1024] = "3059301306072A8648CE3D020106082A811CCF5501822D0342000422FC92E6648C45FF63D9AB23261A5B34F8A2023A0A5E4568C70DD77BB224B9E051519160A838FA154B278DC1277DFED94069A9B6950EDAD1B7C987253E385128"; 
        char outdata1[1024*2] = {0};
-       rv = Tass_PubKeyOper(
+       rv = Tass_PubKey_Oper(
                 phSessionHandle,
                 0,
                 indata,
                 E,
                 N,
-                "",
+                sm2pubDerKey,
                 outdata1/*out*/);
        if(rv)
        {   
@@ -315,7 +316,7 @@ rv = Tass_Disper_Zmk(
        }   
         printf("outdata1 = [%s]\n",outdata1);
 #endif
-
+#if 0
    printf("\n================================随机生成RSA密钥==========================================================\n");
        char zmkDisData[33] = "00000000000000000000000000000000";
        
@@ -348,16 +349,16 @@ rv = Tass_Disper_Zmk(
        {
         printf("return code = [%#010X].\n",rv);
        }
-        printf("rsadzmk = [%x]\n",Rsa_DQ_ZMK);
-        printf("rsapzmk = [%x]\n",Rsa_P_ZMK);
-        printf("rsaqzmk = [%x]\n",Rsa_Q_ZMK);
-        printf("rsadpzmk = [%x]\n",Rsa_DP_ZMK);
-        printf("rsadqzmk = [%x]\n",Rsa_DQ_ZMK);
-        printf("rsaqinvzmk = [%x]\n",Rsa_QINV_ZMK);
-        printf("rsan = [%x]\n",Rsa_N);
-        printf("rsae = [%x]\n",Rsa_E);
-        printf("rsalmk = [%x]\n",Rsa_LMK);
-
+    printf("rsa_d_zmk= %s + %d \n",Rsa_D_ZMK,strlen(Rsa_D_ZMK));
+    printf("rsa_dQ_zmk= %s + %d \n",Rsa_DQ_ZMK,strlen(Rsa_DQ_ZMK));
+    printf("rsa_p_zmk= %s + %d\n",Rsa_P_ZMK,strlen(Rsa_P_ZMK));
+    printf("rsa_Q_zmk= %s + %d\n",Rsa_Q_ZMK,strlen(Rsa_Q_ZMK));
+    printf("rsa_QINV_zmk = %s + %d\n",Rsa_QINV_ZMK,strlen(Rsa_QINV_ZMK));
+    printf("Rsa_N = %s + %d\n",Rsa_N,strlen(Rsa_N));
+    printf("rsa_E = %s + %d\n",Rsa_E,strlen(Rsa_E));
+    printf("rsa_dP_zmk = %s + %d\n",Rsa_DP_ZMK,strlen(Rsa_DP_ZMK));
+    printf("rsa_LMK = %s + %d\n",Rsa_LMK,strlen(Rsa_LMK));
+   
    printf("\n================================随机生成SM2密钥==========================================================\n");
 
      char SM2_D_ZMK[1024] = {0};
@@ -376,14 +377,12 @@ rv = Tass_Disper_Zmk(
        {
         printf("return code = [%#010X].\n",rv);
        }
-#if 0 
-        Tools_PrintBuf("SM2_D_ZMK",SM2_D_ZMK,strlen(SM2_D_ZMK));
-        Tools_PrintBuf("SM2_PUBKEY",SM2_PUBKEY,strlen(SM2_PUBKEY));
-        Tools_PrintBuf("SM2_D_ZMK",SM2_LMK,strlen(SM2_LMK));
 #endif
+#if 0 
         printf("SM2_D_ZMK = [%s]\n",SM2_D_ZMK);
         printf("SM2_PUBKEY = [%s]\n",SM2_PUBKEY);
         printf("SM2_LMK = [%s]\n",SM2_LMK);
+#endif
 #if 0
 printf("==========================解密DER=================================\n");
         char derdata[1024] = "30818902818100C2E686B080F67E76C749B8FB5D69BD305275BF43F70027A161AD651E66997785F24F6E1B6F71A0C2B0D03627AF0EE8AD6CA8B8949800EB28A44D4EA7ED0BCB739ECF4EB7234046BAEBBF8E5576EBD4E592D8D6AB592569D7E274E61A6277518134B35D161C18266126D4520F9D45DF85FAE97FBE78AC0F48C348BA06C8C1FBD30203010001";

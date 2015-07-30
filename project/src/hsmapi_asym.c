@@ -2191,7 +2191,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    if(iOutPublicKeyFlg == 0)
+    if(iOutPublicKeyFlg == 0 || strcmp(pcExpandFlg, "P"))
     {
         /*** DER编码公钥, nB ***/
         len = Tools_GetFieldDerBufLength(p);
@@ -2205,13 +2205,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         }
         p += len;
     }
-    else/***  m及e采用分量密文形式输出的公钥 ***/
+    else if(iOutPublicKeyFlg == 1 && (!strcmp(pcExpandFlg, "P")))/***  m及e采用分量密文形式输出的公钥 ***/
     {
         /*** 公钥模m密文长度  ***/
         len = Tools_ConvertDecBuf2Int(p, 4);
         p += 4;
         if (piPublicKey_mLen)
         {
+	    printf("m len = [%d]\n", len);
             *piPublicKey_mLen = len;
         }
 
@@ -2227,6 +2228,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         p += 4;
         if (piPublicKey_eLen)
         {
+	    printf("e len = [%d]\n", len);
             *piPublicKey_eLen = len;
         }
 

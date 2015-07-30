@@ -34,9 +34,9 @@
  *     @zmk_disData            ZMK分散参数，NULL时不分散
  *     @mode                   加密算法模式
  *   Output:
- *     @SM2_D_ZMK       
- *     @SM2_PUBKEY
- *     @SM2_LMK
+ *     @SM2_D_ZMK              私钥分量D密文 
+ *     @SM2_PUBKEY             DER编码公钥
+ *     @SM2_LMK		       LMK下加密的私钥
  *   Return:            成功返回0，其他表示失败
  *   Description:
  *   Author:       Luo Cangjian
@@ -54,30 +54,71 @@ Tass_GenSm2Key(
      char *SM2_PUBKEY/*out*/,
      char *SM2_LMK/*out*/)
 {
-     int rv = HAR_OK;
-     int piDerPublicKeyLen = 0;
-     int piPrivateKeyLen_Lmk = 0;
-     char SM2PUBKEY[512] = {0};
-     char SM2LMK[512] = {0};
-     char SM2DZMK[512] = {0};
-  rv = HSM_SM2_GenerateNewKeyPair(
-              hSessionHandle,
-              9999, "",
-              SM2PUBKEY, &piDerPublicKeyLen,
-              SM2LMK,  &piPrivateKeyLen_Lmk );
-     int piPrivateKeyLen_Tk = 0;
-     rv = HSM_SM2_ExportByTK(
-              hSessionHandle,mode,
-              "000",/**KEK**/
-               0, zmk_Lmk,
-               strlen(zmk_disData)/32, zmk_disData,
-               0,/*要被导出的sm2索引*/
-               SM2PUBKEY, piDerPublicKeyLen,
-               SM2LMK, piPrivateKeyLen_Lmk,
-               SM2DZMK, &piPrivateKeyLen_Tk/*out*/ );
-    int len = Tools_ConvertByte2HexStr(SM2PUBKEY,piDerPublicKeyLen,SM2_PUBKEY);
-    len = Tools_ConvertByte2HexStr(SM2LMK,strlen(SM2LMK),SM2_LMK);
-    len = Tools_ConvertByte2HexStr(SM2DZMK,strlen(SM2DZMK),SM2_D_ZMK);
+	//定义变量
+	int rv = HAR_OK;
+	int piDerPublicKeyLen = 0;
+     	int piPrivateKeyLen_Lmk = 0;
+     	char SM2PUBKEY[512] = {0};
+     	char SM2LMK[512] = {0};
+     	char SM2DZMK[512] = {0};
+	int piPrivateKeyLen_Tk = 0;
+	int len = 0;
+	//检查参数
+	if(zmkIndex >0 && strlen(zmk_Lmk) >=16 )
+	{
+		zmkIndex = 0;
+	}
+	if(strlen(zmk_disData) % 32 != 0)
+	{
+		LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
+		return rv;
+	}
+	if(mode <0 || mode >2)
+	{
+		mode = 0;
+	}
+        
+	//分散参数
+      	int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
+	
+	//生成SM2
+  	rv = HSM_SM2_GenerateNewKeyPair(
+           	   hSessionHandle,
+              	   9999, "",/**产生sm2密钥的索引，标签**/
+              	   SM2PUBKEY,/**新生成的SM2公钥，DER编码**/ &piDerPublicKeyLen,
+                   SM2LMK,/**LMK下加密的SM2私钥密文**/  &piPrivateKeyLen_Lmk );
+     		
+     	//导出密钥
+	rv = HSM_SM2_ExportByTK(
+                  hSessionHandle,mode,
+                  "000",/**KEK**/
+                  zmkIndex,/**<=0使用下一个参数,否则使用索引**/ zmk_Lmk,/**保护密钥**/
+                  iTkDeriveNumber, zmk_disData,
+                  0,/*要被导出的sm2索引*/
+                  SM2PUBKEY, piDerPublicKeyLen,
+                  SM2LMK, piPrivateKeyLen_Lmk,
+                  SM2DZMK, &piPrivateKeyLen_Tk/*out*/ );
+    	
+	len = Tools_ConvertByte2HexStr(SM2PUBKEY,piDerPublicKeyLen,SM2_PUBKEY);
+    	if(!len)
+	{
+		LOG_ERROR("%S","SM2_PUBKEY Convert Hex fail");
+		return rv;
+	}
+	
+	len = Tools_ConvertByte2HexStr(SM2LMK,strlen(SM2LMK),SM2_LMK);
+   	
+	if(!len)
+	{
+		LOG_ERROR("%s","SM2_LMK Convert Hex fail");
+		return rv;
+	}
+ 	
+	len = Tools_ConvertByte2HexStr(SM2DZMK,piPrivateKeyLen_Tk,SM2_D_ZMK);
+	if(!len)
+	{
+		LOG_ERROR("%S","SMK_D_ZMK Convert Hex fail");
+	}
    return rv;
 
 }
@@ -135,27 +176,27 @@ Tass_DeriveKeyExportedByRsa(
  * Function:   随机生成RSA密钥对，并使用ZMK加密导出
  * Input:
  *   @hSessionHandle  会话句柄
- *   @RsaLen          Rsa密钥长度
- *   @zmkIndex
- *   @zmk_Lmk
- *   @zmk_disData
- *   @mode
+ *   @RsaLen          Rsa密钥模长
+ *   @zmkIndex        保护密钥分散因子
+ *   @zmk_Lmk         保护密钥
+ *   @zmk_disData     保护密钥分散因子
+ *   @mode            加密算法模式 0：ECB 01:CBC
  * Output:
- *   @Rsa_D_ZMK
- *   @Rsa_P_ZMK
- *   @Rsa_Q_ZMK
- *   @Rsa_DP_ZMK
- *   @Rsa_DQ_ZMK
- *   @Rsa_QINV_ZMK
- *   @Rsa_N
- *   @Rsa_E
- *   @Rsa_LMK*
+ *   @Rsa_D_ZMK       RSA密钥D分量
+ *   @Rsa_P_ZMK       RSA密钥P分量
+ *   @Rsa_Q_ZMK       RSA密钥Q分量
+ *   @Rsa_DP_ZMK      RSA密钥DP分量
+ *   @Rsa_DQ_ZMK      RSA密钥DQ分量
+ *   @Rsa_QINV_ZMK    RSA密钥QINV分量
+ *   @Rsa_N           RSA_N
+ *   @Rsa_E           RSA_E
+ *   @Rsa_LMK         RSA_LMK
  * Return:            成功返回0，其他表示失败
  * Description:
  * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_GenRSAKey(
       void *hSessionHandle,
@@ -174,104 +215,167 @@ Tass_GenRSAKey(
       char *Rsa_E/*out*/,
       char *Rsa_LMK/*out*/)
 {
-    int rv = HAR_OK;
-    
-    unsigned char pucDerPublicKey[512+32] = {0};
-    char szDerPubKeyHex[512] = {0};
+	//定义变量
+	int rv = HAR_OK;
+      	unsigned char pucDerPublicKey[512+32] = {0};
+      	char szDerPubKeyHex[1024] = {0};
+      	int piDerPublicKeyLen = 0;
+      	unsigned char pucPrivateKey_Lmk[512+32] = {0};
+      	unsigned char *piDerPublicKey[2048] = {0};
+      	int piPublicKey_mLen = 0;
+      	int piPublicKey_eLen = 0;
+      	int piPrivateKey_dLen = 0;
+      	int piPrivateKey_pLen = 0;
+      	int piPrivateKey_qLen = 0;
+      	int piPrivateKey_dpLen = 0;
+      	int piPrivateKey_dqLen = 0;
+      	int piPrivateKey_qInvLen = 0;
+      	char Rsa_N_m[512] = {0};//公钥
+      	char Rsa_E_m[512] = {0};//指数
+      	char Rsa_D_ZMK_m[512] = {0};
+      	char Rsa_P_ZMK_m[512] = {0};
+      	char Rsa_Q_ZMK_m[512] = {0};
+      	char Rsa_DP_ZMK_m[512] = {0};
+      	char Rsa_DQ_ZMK_m[512] = {0};
+      	char Rsa_QINV_ZMK_m[512] = {0};
+	int piPrivateKeyLen_Lmk = 0;
+	//检查参数
+	if(RsaLen < 1024 || RsaLen >4096)
+	{
+		LOG_ERROR("%s","RsaLen is error,it should between 2048 and 4096");
+		return rv;
+	}	
 
-    int piDerPublicKeyLen = 0;
-    unsigned char pucPrivateKey_Lmk[512+32] = {0};
-    int piPrivateKeyLen_Lmk = 0;
-   
-    int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
-    
-    rv = HSM_RSA_GenerateNewKeyPair(
+	if(strlen(zmk_disData) % 32 != 0)
+	{
+		LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
+		return rv;
+	}
+	if(mode <0 || mode >2)
+	{
+		mode = 0;
+	}
+        //分散参数
+      	int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
+      	unsigned char Rsa_LMK_m[2048] = {0};
+      rv = HSM_RSA_GenerateNewKeyPair(
            hSessionHandle,
-           0,
-           NULL,
-           RsaLen, 
-           NULL,
+           0, /**密钥索引，0表示不存储**/
+           NULL, /**RSA密钥标签**/
+           RsaLen, /**密钥模长**/
+           NULL, /**公钥指数E ，默认为65537**/
            pucDerPublicKey/*out*/, 
            &piDerPublicKeyLen/*out*/,
-           Rsa_LMK/*out*/, 
+           Rsa_LMK_m/*out*/,/**LMK下加密的RSA私钥密文**/ 
            &piPrivateKeyLen_Lmk/*out*/ );
-   if(rv)
-    {
-      LOG_ERROR("%s","GenerateNewKeyPair is error");
-      return rv;
-    }
-	 //解密Der编码
- 	int Rsa_N_Len = 0;
+	
+	if(rv)
+    	{
+      		LOG_ERROR("%s","GenerateNewKeyPair is error");
+      		return rv;
+    	}
+        
+	int Rsa_N_Len = 0;
   	int Rsa_E_Len = 0;
   	unsigned char OutBuf[1024] = {0};
         int len = Tools_ConvertByte2HexStr(pucDerPublicKey,piDerPublicKeyLen, szDerPubKeyHex);
-       // printf("======pucDerPublicKey = %s \n", szDerPubKeyHex);
+        //私钥转码
+	len = Tools_ConvertByte2HexStr(Rsa_LMK_m,piPrivateKeyLen_Lmk, Rsa_LMK);
+        
+	//解密DER编码公钥
         rv =  Tools_DDer(szDerPubKeyHex,Rsa_N,&Rsa_N_Len,Rsa_E,&Rsa_E_Len);
-        if(rv)
+       
+	 if(rv)
         {
            LOG_ERROR("%s","pucDerPublicKey Convert is error");
            return rv;
         }
-       //   Tools_PrintBuf("privateKey",Rsa_LMK,piPrivateKeyLen_Lmk);
-       //   printf("RSA_N = %s\n",Rsa_N);
-       //   printf("RSA_E = %s\n",Rsa_E);
-     unsigned char *piDerPublicKey[2048] = {0};
-     int piPublicKey_mLen = 0;
-     int piPublicKey_eLen = 0;
-     int piPrivateKey_dLen = 0;
-     int piPrivateKey_pLen = 0;
-     int piPrivateKey_qLen = 0;
-     int piPrivateKey_dpLen = 0;
-     int piPrivateKey_dqLen = 0;
-     int piPrivateKey_qInvLen = 0;
-     char Rsa_N_m[512] = {0};//公钥
-     char Rsa_E_m[512] = {0};//指数
-	 rv = HSM_RSA_ExportRSAKey(
+      
+	rv = HSM_RSA_ExportRSAKey(
                hSessionHandle,
                mode,  "000",
-               0, zmk_Lmk,
+               zmkIndex, zmk_Lmk,/**保护密钥索引，保护密钥，索引为0则使用密钥值**/
                iTkDeriveNumber, zmk_disData,
                0,
-               Rsa_LMK/*被导出私钥数据*/, piPrivateKeyLen_Lmk/*私钥长度*/,
+               Rsa_LMK_m/*被导出私钥数据*/, piPrivateKeyLen_Lmk/*私钥长度*/,
                ""/*拓展标识*/, "",/*PAD标识*/
                1/*公钥输出格式，1为DER编码(模 、指数序列)*/,
   	       "",/*初始化向量*/
                piDerPublicKey/*OUT*/, &piDerPublicKeyLen/*OUT*/,
                Rsa_N_m/*OUT*/, &piPublicKey_mLen/*OUT*/,
                Rsa_E_m/*OUT*/, &piPublicKey_eLen/*OUT*/,
-               Rsa_DQ_ZMK/*OUT*/, &piPrivateKey_dLen/*OUT*/,
-               Rsa_P_ZMK/*OUT*/, &piPrivateKey_pLen/*OUT*/,
-               Rsa_Q_ZMK/*OUT*/, &piPrivateKey_qLen/*OUT*/,
-               Rsa_DP_ZMK/*OUT*/, &piPrivateKey_dpLen/*OUT*/,
-               Rsa_DQ_ZMK/*OUT*/, &piPrivateKey_dqLen/*OUT*/,
-               Rsa_QINV_ZMK/*OUT*/, &piPrivateKey_qInvLen/*OUT*/);   
-   if(rv)
-    {
-      LOG_ERROR("%s","Hsmapi ExportRSAKey is error");
-      return rv;
-    }
+               Rsa_D_ZMK_m/*OUT*/, &piPrivateKey_dLen/*OUT*/,
+               Rsa_P_ZMK_m/*OUT*/, &piPrivateKey_pLen/*OUT*/,
+               Rsa_Q_ZMK_m/*OUT*/, &piPrivateKey_qLen/*OUT*/,
+               Rsa_DP_ZMK_m/*OUT*/, &piPrivateKey_dpLen/*OUT*/,
+               Rsa_DQ_ZMK_m/*OUT*/, &piPrivateKey_dqLen/*OUT*/,
+               Rsa_QINV_ZMK_m/*OUT*/, &piPrivateKey_qInvLen/*OUT*/);  
+
+   	if(rv)
+    	{
+      		LOG_ERROR("%s","Hsmapi ExportRSAKey is error");
+      		return rv;
+    	}
+	//转码
+	len = Tools_ConvertByte2HexStr(Rsa_D_ZMK_m,piPrivateKey_dLen,Rsa_D_ZMK); 
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_D_ZMK Convert Hex fail");
+      		return rv;
+    	}
+	len = Tools_ConvertByte2HexStr(Rsa_P_ZMK_m,piPrivateKey_pLen,Rsa_P_ZMK); 
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
+      		return rv;
+    	}
+	len = Tools_ConvertByte2HexStr(Rsa_Q_ZMK_m,piPrivateKey_qLen,Rsa_Q_ZMK); 
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
+      		return rv;
+    	}
+	len = Tools_ConvertByte2HexStr(Rsa_DP_ZMK_m,piPrivateKey_dpLen,Rsa_DP_ZMK); 
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_DP_ZMK Convert Hex fail");
+      		return rv;
+    	}
+	len = Tools_ConvertByte2HexStr(Rsa_DQ_ZMK_m,piPrivateKey_dLen,Rsa_DQ_ZMK); 
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_DQ_ZMK Convert Hex fail");
+      		return rv;
+    	}
+	len = Tools_ConvertByte2HexStr(Rsa_QINV_ZMK_m,piPrivateKey_qInvLen,Rsa_QINV_ZMK);
+	if(!len)
+    	{
+      		LOG_ERROR("%s","Rsa_QINV_ZMK COnvert Hex fail");
+      		return rv;
+    	}
+
     return rv; 
 }
 
 /***************************************************************************
- * * Subroutine: Tass_PubKey_Oper
- * * Function:   RSA/SM2公钥加密运算接口
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @keytype         密钥类型
- * *   @indata          输入数据，与公钥等长
- * *   @RSAPubKeyE      RSA公钥
- * *   @RSAPubKeyN      RSA公钥
- * *   @SM2PubKey       SM2公钥
- * * Output:
- * *   @outdata         加密后数据
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_PubKey_Oper
+ * Function:   RSA/SM2公钥加密运算接口
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @keytype         密钥类型
+ *   @indata          输入数据，与公钥等长
+ *   @RSAPubKeyE      RSA公钥
+ *   @RSAPubKeyN      RSA公钥
+ *   @SM2PubKey       SM2公钥
+ * Output:
+ *   @outdata         加密后数据
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_PubKey_Oper(
      void *hSessionHandle,
@@ -282,66 +386,115 @@ Tass_PubKey_Oper(
      char *SM2PubKey,
      char *outdata/*out*/)
 {
+	//变量定义
+	int rv = HAR_OK;
+ 	char aucInData[2048*2] = {0};
+  	unsigned char publicDer[512+32] = {0};
+ 	int publicDerLen = 512+32;
+ 	unsigned char pucInput[1024*2] = {0};
+  	unsigned char pucOutput[1024*2] = {0};
+  	int piOutputLength = 0;
+        int len = 0;	
+	unsigned char SM2PubKey_temp[1024] = {0};
 
-  int rv = HAR_OK;
-  char aucInData[2048*2] = {0};
-  unsigned char publicDer[512+32];
-  int publicDerLen = 512+32;
-  unsigned char pucInput[1024*2] = {0};
-  unsigned char pucOutput[1024*2] = {0};
-  int piOutputLength = 0;
-  rv =  Tools_ConvertHexStr2Byte(indata,strlen(indata),pucInput);
-  rv =  Tools_Der(RSAPubKeyN,RSAPubKeyE,publicDer,&publicDerLen);
-  Tools_PrintBuf("publicDer",publicDer,publicDerLen);
-  if(keytype == 0)
-   {
-    rv = HSM_RSA_EncryptData( 
-                hSessionHandle,0,
-                0, 
-                publicDer, publicDerLen,
-                pucInput, strlen(pucInput),
-                pucOutput/*out*/, &piOutputLength/*out*/ );
+	//检查参数
+	if(keytype != 0 && keytype != 1)
+	{
+		keytype = 0;
+	}
+	
+ 	int indataLen =  Tools_ConvertHexStr2Byte(indata,strlen(indata),pucInput);
+	if(indataLen == -1)
+	{
+		LOG_ERROR("%s","indata Convert Byte fail");
+		return rv;
+	}
+	
+	
+	
+  	if(keytype == 0)
+   	{
+				
+  	//Der编码
+		rv =  Tools_Der(RSAPubKeyN,RSAPubKeyE,publicDer,&publicDerLen);
+		if(strlen(RSAPubKeyN) != strlen(indata))
+		{
+			LOG_ERROR("%s","indata length is error,it should equals publicDerLen");
+			return rv;
+		}
+	//加密数据
+    		rv = HSM_RSA_EncryptData( 
+                	hSessionHandle,
+			0,/**不填充**/
+                	0, /**RSA密钥索引**/
+                	publicDer, publicDerLen,/**公钥及公钥长度**/
+                	pucInput, indataLen,/**输入数据**/
+                	pucOutput/*out*/, &piOutputLength/*out*/ );
 
-   }
-  else if(keytype == 1)
-   {
-    rv = HSM_SM2_EncryptData(
-                hSessionHandle,0,
-                SM2PubKey, strlen(SM2PubKey),
-                pucInput, strlen(pucInput),
-                pucOutput/*out*/, &piOutputLength/*out*/ );
+   	}
+  	else if(keytype == 1)
+   	{
+    		if(SM2PubKey == NULL)
+		{
+			LOG_ERROR("%S","SM2_PUBKEY is NULL");
+			return rv;
+		}
+		//转码
+		Tools_ConvertHexStr2Byte(SM2PubKey,strlen(SM2PubKey),SM2PubKey_temp);
+		int sm2DerLen = Tools_GetFieldDerBufLength(SM2PubKey_temp);
+		if(sm2DerLen == HAR_DER_DECODE)
+		{
+			LOG_ERROR("","get sm2DerLength fial");
+ 			return rv;
+		}
+		rv = HSM_SM2_EncryptData(
+        	        hSessionHandle,0,
+                	SM2PubKey_temp, sm2DerLen,
+                	pucInput, indataLen,
+                	pucOutput/*out*/, &piOutputLength/*out*/ );
 
-   }
-  else
-   {
-    LOG_ERROR("%s", "keytype is error");
+   	}
+  	else
+ 	{
+    		LOG_ERROR("%s", "keytype is error");
+   		 return rv;
+   	}
+  	
+	if(rv)
+	{
+		LOG_ERROR("%s","EncryptData is error");
+		return rv;
+	}
+	//转码
+ 	len = Tools_ConvertByte2HexStr(pucOutput, strlen(pucOutput), outdata);
+	if(!len)
+	{
+		LOG_ERROR("%S","The outdata of Tass_PubKey_Oper  Convert Hex fail");
+		return rv;
+	}
     return rv;
-   }
-  Tools_PrintBuf("pucOutput = ",pucOutput,strlen(outdata));
-  rv = Tools_ConvertByte2HexStr(pucOutput, strlen(pucOutput), outdata);
-  Tools_PrintBuf("pcout = ",outdata,strlen(outdata));
-  return rv;
-
+ 
 }
 
+
 /***************************************************************************
- * * Subroutine: Tass_PRIVATE_Oper
- * * Function:   私钥解密运算接口。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @keytype         密钥类型,0为rsa,1为sm2
- * *   @Rsa_LMK         rsa本地密钥
- * *   @SM2_LMK         sm2本地密钥
- * *   @indata          外部送入数据
- * * Output:
- * *   @outdata         私钥解密后数据
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_PRIVATE_Oper
+ * Function:   私钥解密运算接口。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @keytype         密钥类型,0为rsa,1为sm2
+ *   @Rsa_LMK         rsa本地密钥
+ *   @SM2_LMK         sm2本地密钥
+ *   @indata          外部送入数据
+ * Output:
+ *   @outdata         私钥解密后数据
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_PRIVATE_Oper(
      void *hSessionHandle,
@@ -352,34 +505,67 @@ Tass_PRIVATE_Oper(
      char *outdata/*out*/)
  
 {
-  int rv = HAR_OK;
-  int piOutputLength[8] = {0};
-  unsigned char aucInData[2048*2] = {0};
-  rv =  Tools_ConvertHexStr2Byte(indata,strlen(indata),aucInData);
-  
-  if(keytype == 0)
-   {
-    rv = HSM_RSA_DecryptData(hSessionHandle, 0,
-    9999, Rsa_LMK, strlen(Rsa_LMK),
-    aucInData, strlen(aucInData),
-    outdata/*out*/, piOutputLength/*out*/ );
-  
-   }
-  else if(keytype == 1)
-   {
-    rv = HSM_SM2_DecryptData(hSessionHandle,
-    9999, SM2_LMK, strlen(SM2_LMK),
-    aucInData, strlen(aucInData),
-    outdata/*out*/, piOutputLength/*out*/ );
-   
-   }
-  else
-   {
-    LOG_ERROR("%s", "keytype is error");
-    return rv;
-   }
-  rv = Tools_ConvertByte2HexStr(outdata, strlen(outdata), outdata);
+	int rv = HAR_OK;
+  	int piOutputLength[8] = {0};
+        char aucInData[2048*2] = {0};
+	int len = 0;
+	char Rsa_LMK_temp[1024] = {0};
+	char SM2_LMK_temp[1024] = {0};
+
+	if(keytype != 1)
+	{
+		keytype = 0;
+	}
+	if(strlen(indata) <=0 || strlen(indata) > 2048)
+	{
+		LOG_ERROR("%s%","indata is error,it should between 0----2048");
+		return rv;
+	}
+	//转码	
+  	len =  Tools_ConvertHexStr2Byte(indata,strlen(indata),aucInData);
+        if(len == -1)
+	{
+		LOG_ERROR("%s","indata Covert Byte fail");
+		return rv;
+	}	
+	
+ 	if(keytype == 0)
+  	 {
+		int RsaLen = Tools_ConvertHexStr2Byte(Rsa_LMK,strlen(Rsa_LMK),Rsa_LMK_temp);
+    		rv = HSM_RSA_DecryptData(hSessionHandle,
+			0,/**不填充**/
+    			9999,/**0或9999时下面两个参数可有效**/ 
+			Rsa_LMK_temp, RsaLen,/**私钥及私钥长度**/
+    			aucInData,     len,/**待解密的数据及长度**/
+ 			outdata/*out*/, piOutputLength/*out*/ );
+  	 }
+ 	else if(keytype == 1)
+   	{
+		int sm2Len = Tools_ConvertHexStr2Byte(SM2_LMK,strlen(SM2_LMK),SM2_LMK_temp);
+    		rv = HSM_SM2_DecryptData(hSessionHandle,
+   			9999, 
+			SM2_LMK_temp, sm2Len,
+    			aucInData, len,
+    			outdata/*out*/, piOutputLength/*out*/ );
+   	}
+  	else
+   	{
+    		LOG_ERROR("%s", "keytype is error");
+   		 return rv;
+   	}	
+ 	if(rv)
+	{
+		LOG_ERROR("%s","DecryptData is fail");
+		return rv;
+	} 
+  	len = Tools_ConvertByte2HexStr(outdata, strlen(outdata), outdata);
+	if(len == -1)
+	{
+		LOG_ERROR("%s%","outdata Convert Hex is fail");
+		return rv;
+	}
   return rv;
+
 }
 
 /***************************************************************************
@@ -434,25 +620,25 @@ Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 }
 
 /***************************************************************************
- * * Subroutine: Tass_DecryptTrackData
- * * Function:   使用ZEK解密磁道数据。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @iKeyIdx         密钥索引
- * *   @pcKey_LMK       密钥密文
- * *   @pcTrackText     磁道密文
- * *   @iTrackTextLen   磁道密文长度
- * *   @iAlgId          解密模式
- * *   @pcIV            初始化IV 
- * * Output:
- * *   @pcTrackCipher   磁道明文
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+ * Subroutine: Tass_DecryptTrackData
+ * Function:   使用ZEK解密磁道数据。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @iKeyIdx         密钥索引
+ *   @pcKey_LMK       密钥密文
+ *   @pcTrackText     磁道密文
+ *   @iTrackTextLen   磁道密文长度
+ *   @iAlgId          解密模式
+ *   @pcIV            初始化IV 
+ * Output:
+ *   @pcTrackCipher   磁道明文
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_DecryptTrackData(
      void *hSessionHandle,
@@ -486,26 +672,26 @@ Tass_DecryptTrackData(
 
 
 
-/***************************************************************************
- * * Subroutine: Tass_EncryptTrackData
- * * Function:   使用ZEK加密磁道数据。
- * * Input:
- * *   @hSessionHandle  会话句柄
- * *   @iKeyIdx         密钥索引
- * *   @pcKey_LMK       密钥密文
- * *   @pcTrackText     磁道密文
- * *   @iTrackTextLen   磁道密文长度
- * *   @iAlgId          解密模式
- * *   @pcIV            初始化IV 
- * * Output:
- * *   @pcTrackCipher   磁道密文
- * *
- * * Return:            成功返回0，其他表示失败
- * * Description:
- * * Author:       Luo Cangjian
- * * Date:         2015.06.05
- * * ModifyRecord:
- * * *************************************************************************/
+/*************************************************************************
+ * Subroutine: Tass_EncryptTrackData
+ * Function:   使用ZEK加密磁道数据。
+ * Input:
+ *   @hSessionHandle  会话句柄
+ *   @iKeyIdx         密钥索引
+ *   @pcKey_LMK       密钥密文
+ *   @pcTrackText     磁道密文
+ *   @iTrackTextLen   磁道密文长度
+ *   @iAlgId          解密模式
+ *   @pcIV            初始化IV 
+ * Output:
+ *   @pcTrackCipher   磁道密文
+ *
+ * Return:            成功返回0，其他表示失败
+ * Description:
+ * Author:       Luo Cangjian
+ * Date:         2015.06.05
+ * ModifyRecord:
+ * *************************************************************************/
 HSMAPI int 
 Tass_EncryptTrackData(
      void *hSessionHandle,
@@ -616,11 +802,7 @@ Tass_Disper_Zmk(
        memcpy(p, pcZmk_ZMK,strlen(pcZmk_ZMK));
        pcZmk_ZMK = pcZmk_ZMK_1;
     }
-    
-	printf("zmd index = %d\n", iZmkIdx);
-	printf("zmk cipher = %s\n", pcZmk_LMK);
-        printf("pcZmkKey_LMK = %s\n", pcZmkKey_LMK);
-        printf("pcZmk_ZMK = %s\n", pcZmk_ZMK);
+  
     rv = HSM_RCL_ImportKey_A6(
     	hSessionHandle,
     	"000",

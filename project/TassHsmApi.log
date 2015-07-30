@@ -1,15 +1,72 @@
-<2015-07-29 18:57:06> [3802] [562] ParseMsgHead - Response packet status code is not 0.
-<2015-07-29 18:57:06> [3802] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
-<2015-07-29 18:57:06> [3802] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
-<2015-07-29 18:57:06> [3802] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
-<2015-07-29 18:57:06> [3802] [3092] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
-<2015-07-29 19:09:09> [3844] [562] ParseMsgHead - Response packet status code is not 0.
-<2015-07-29 19:09:09> [3844] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
-<2015-07-29 19:09:09> [3844] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
-<2015-07-29 19:09:09> [3844] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
-<2015-07-29 19:09:09> [3844] [3092] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
-<2015-07-29 19:13:38> [3948] [562] ParseMsgHead - Response packet status code is not 0.
-<2015-07-29 19:13:38> [3948] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
-<2015-07-29 19:13:38> [3948] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
-<2015-07-29 19:13:38> [3948] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
-<2015-07-29 19:13:38> [3948] [3092] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 18:18:30> [5084] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 18:18:30> [5084] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 18:18:30> [5084] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 18:18:30> [5084] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 18:18:30> [5084] [3232] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 18:18:30> [5084] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 18:18:30> [5084] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000050].
+<2015-07-30 18:18:30> [5084] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [80], [0X00000050].
+<2015-07-30 18:18:30> [5084] [302] HSM_SM2_EncryptData - Communicate with Hsm error, return code = [80], [0X00000050].
+<2015-07-30 18:18:30> [5084] [456] Tass_PubKey_Oper - EncryptData is error
+<2015-07-30 18:30:09> [5184] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 18:30:09> [5184] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 18:30:09> [5184] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 18:30:09> [5184] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 18:30:09> [5184] [3238] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 18:30:09> [5184] [444] Tass_PubKey_Oper - 
+<2015-07-30 18:42:46> [5228] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 18:42:46> [5228] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 18:42:46> [5228] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 18:42:46> [5228] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 18:42:46> [5228] [3238] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 18:42:46> [5228] [444] Tass_PubKey_Oper - 
+<2015-07-30 18:54:44> [5296] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 18:54:44> [5296] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 18:54:44> [5296] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 18:54:44> [5296] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 18:54:44> [5296] [3241] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:08:23> [5321] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:08:23> [5321] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:08:23> [5321] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:08:23> [5321] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:08:23> [5321] [3241] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:10:45> [5332] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:10:45> [5332] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:10:45> [5332] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:10:45> [5332] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:10:45> [5332] [3241] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:34:00> [5393] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:34:00> [5393] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:34:00> [5393] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:34:00> [5393] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:34:00> [5393] [3270] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:36:46> [5418] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:36:46> [5418] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:36:46> [5418] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:36:46> [5418] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:36:46> [5418] [3270] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:36:46> [5418] [521] Tass_PRIVATE_Oper - indata is error,it should between 0----2048
+<2015-07-30 19:38:36> [5423] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:38:36> [5423] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:38:36> [5423] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:38:36> [5423] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:38:36> [5423] [3270] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:38:36> [5423] [521] Tass_PRIVATE_Oper - indata is error,it should between 0----2048
+<2015-07-30 19:40:05> [5433] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 19:40:05> [5433] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000017].
+<2015-07-30 19:40:05> [5433] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [23], [0X00000017].
+<2015-07-30 19:40:05> [5433] [275] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-07-30 19:40:05> [5433] [3270] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-07-30 19:40:05> [5433] [521] Tass_PRIVATE_Oper - indata is error,it should between 0----2048
+<2015-07-30 19:41:41> [5444] [521] Tass_PRIVATE_Oper - indata is error,it should between 0----2048
+<2015-07-30 19:43:11> [5492] [1482] HSM_RSA_DecryptData - Parameter: iInputLength = [-1] is invalid, it must be 128 - 256.
+<2015-07-30 19:43:11> [5492] [554] Tass_PRIVATE_Oper - HSM_RSA_DecryptData is fail
+<2015-07-30 19:45:32> [5539] [1482] HSM_RSA_DecryptData - Parameter: iInputLength = [-1] is invalid, it must be 128 - 256.
+<2015-07-30 19:45:32> [5539] [554] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-30 19:55:00> [5598] [528] Tass_PRIVATE_Oper - indata Covert Byte fail
+<2015-07-30 19:55:53> [5602] [528] Tass_PRIVATE_Oper - indata Covert Byte fail
+<2015-07-30 20:06:22> [5769] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-30 20:06:22> [5769] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-30 20:06:22> [5769] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-30 20:06:22> [5769] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-30 20:06:22> [5769] [558] Tass_PRIVATE_Oper - DecryptData is fail
