@@ -651,21 +651,51 @@ Tass_DecryptTrackData(
      char *pcIV,
      char *pcTrackText/*out*/)
 {
-    int     rv = HAR_OK;
-    int     iOutDataLen = 0;
-    int     iInDataLen = 0;
-    unsigned char aucInData[1024 * 2] = {0};
-    unsigned char aucOutData[1024 * 4] = {0};
-    int piOutputLength[]={0};
-    rv =  Tools_ConvertHexStr2Byte(pcTrackCipher,strlen(pcTrackCipher),aucInData);
-    rv = HSM_IC_SymmKeyDecryptData(hSessionHandle,
-    	iAlgId, "000", iKeyIdx, pcKey_LMK,
-    	"", 0, "",
-    	iPadFlg, pcIV,
-    	aucInData, strlen(aucInData),
-    	pcTrackText/*out*/, piOutputLength/*out*/ );
-    rv = Tools_ConvertByte2HexStr(pcTrackText, strlen(pcTrackText), pcTrackText);
-    return rv;
+	int rv = HAR_OK;
+    	int iOutDataLen = 0;
+    	int iInDataLen = 0;
+	int len = 0;
+    	unsigned char aucInData[1024 * 2] = {0};
+    	unsigned char aucOutData[1024 * 4] = {0};
+    	int piOutputLength= 0;
+	//检查参数	
+	if(strlen(pcTrackCipher)%2 != 0)
+	{
+		LOG_ERROR("%s","pcTrackCipher length is error");
+		return rv;
+	}
+	if(iAlgId == 2 && strlen(pcIV) == 0)
+	{
+		LOG_ERROR("%s","the pcIV length is error");
+		return rv;
+	}
+    	len =  Tools_ConvertHexStr2Byte(pcTrackCipher,strlen(pcTrackCipher),aucInData);
+	if(len == -1)
+	{
+		LOG_ERROR("%s","PcTrackCipher Convert Byte fail");
+		return rv;
+	}
+    	rv = HSM_IC_SymmKeyDecryptData(hSessionHandle,
+    			iAlgId,/**算法模式**/
+			"00B",/**密钥类型**/
+			iKeyIdx, pcKey_LMK,/**密钥**/
+    			"",/**分散因子**/ 
+			0, "",/**会话密钥**/
+    			iPadFlg, pcIV,/**填充模式**/
+    			aucInData, len,
+    			pcTrackText/*out*/, &piOutputLength/*out*/ );
+	if(rv)
+	{
+		LOG_ERROR("%s","DecyptData fail");
+		return rv;
+	}	
+   	len = Tools_ConvertByte2HexStr(pcTrackText, piOutputLength, pcTrackText);
+	if(len == -1)
+	{
+		LOG_ERROR("%s","pcTrackText Convert HexStr fail");
+		return rv;
+   	}
+   return rv;
     
 }
 
