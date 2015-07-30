@@ -506,7 +506,7 @@ Tass_PRIVATE_Oper(
  
 {
 	int rv = HAR_OK;
-  	int piOutputLength[8] = {0};
+  	int piOutputLength = 0;
         char aucInData[2048*2] = {0};
 	int len = 0;
 	char Rsa_LMK_temp[1024] = {0};
@@ -537,7 +537,7 @@ Tass_PRIVATE_Oper(
     			9999,/**0或9999时下面两个参数可有效**/ 
 			Rsa_LMK_temp, RsaLen,/**私钥及私钥长度**/
     			aucInData,     len,/**待解密的数据及长度**/
- 			outdata/*out*/, piOutputLength/*out*/ );
+ 			outdata/*out*/, &piOutputLength/*out*/ );
   	 }
  	else if(keytype == 1)
    	{
@@ -546,7 +546,7 @@ Tass_PRIVATE_Oper(
    			9999, 
 			SM2_LMK_temp, sm2Len,
     			aucInData, len,
-    			outdata/*out*/, piOutputLength/*out*/ );
+    			outdata/*out*/, &piOutputLength/*out*/ );
    	}
   	else
    	{
@@ -704,22 +704,53 @@ Tass_EncryptTrackData(
      char *pcIV,
      char *pcTrackCipher/*out*/)
 {
-    int     rv = HAR_OK;
-    int     iOutDataLen = 0;
-    int     iInDataLen = 0;
-    //输入数据转为二进制
-    unsigned char aucInData[1024 * 2] = {0};
-    unsigned char aucOutData[1024 * 4] = {0};
-    int piOutputLength[]={0};
-    rv =  Tools_ConvertHexStr2Byte(pcTrackText,strlen(pcTrackText),aucInData);
-    rv = HSM_IC_SymmKeyEncryptData(hSessionHandle,
-    iAlgId, "000", iKeyIdx, pcKey_LMK,
-    "", 0, "",
-    iPadFlg, pcIV,
-    aucInData, strlen(aucInData),
-    pcTrackCipher/*out*/, piOutputLength/*out*/ );
-    //转为十六进制
-    rv = Tools_ConvertByte2HexStr(pcTrackCipher, strlen(pcTrackCipher), pcTrackCipher);
+	int     rv = HAR_OK;
+        int     iOutDataLen = 0;
+    	int     iInDataLen = 0;
+	int     len = 0;
+    	unsigned char aucInData[1024 * 2] = {0};
+    	unsigned char aucOutData[1024 * 4] = {0};
+    	int piOutputLength = 0;
+	if(strlen(pcTrackText)%2 != 0)
+	{
+		LOG_ERROR("%s","the length of pcTrackText is error");
+		return rv;
+	}
+	if(iAlgId == 2 && strlen(pcIV) == 0)
+	{
+		LOG_ERROR("%s","pcIV length is error");
+		return rv;
+	}
+	if(strlen(pcTrackCipher)%2 != 0)
+	{
+		LOG_ERROR("%s","pcTrackCipher length is error");
+		return rv;
+	}
+    	//输入数据转为二进制
+	//输入数据转化
+    	len =  Tools_ConvertHexStr2Byte(pcTrackText,strlen(pcTrackText),aucInData);
+	if(len == -1)
+	{
+		LOG_ERROR("%s","pcTrackText Convert byte fail");
+		return rv;
+	}
+    	rv = HSM_IC_SymmKeyEncryptData(hSessionHandle,
+    			iAlgId,/**算法模式**/
+			"000",/**密钥类型**/
+			iKeyIdx, pcKey_LMK,/**加密数据的密钥**/
+    			"",/**分散参数**/
+			 0, "",/**会话密钥**/
+    			iPadFlg, pcIV,/**填充模式及初始向量**/
+    			aucInData, len,/**磁道明文，及长度**/
+    			aucOutData/*out*/, &piOutputLength/*out*/ );
+    	//转为十六进制
+    	len = Tools_ConvertByte2HexStr(aucOutData, piOutputLength, pcTrackCipher);
+	if(len == -1)
+	{
+		
+		LOG_ERROR("%s","pcTrackCipher Covert HexStr fail");
+		return rv;
+	}
     return rv;
 } 
 

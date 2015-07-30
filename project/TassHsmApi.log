@@ -70,3 +70,91 @@
 <2015-07-30 20:06:22> [5769] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
 <2015-07-30 20:06:22> [5769] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
 <2015-07-30 20:06:22> [5769] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:01:08> [2475] [160] ConnectTcpServer - Connect to the server device failed.
+<2015-07-31 00:01:08> [2475] [924] SDF_OpenDevice - Error: TCP_ConnectHsm failed, return code = [100663298], [0X06000002].
+<2015-07-31 00:08:18> [2511] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:08:18> [2511] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:08:18> [2511] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:08:18> [2511] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:08:18> [2511] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:16:13> [2563] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:16:13> [2563] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:16:13> [2563] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:16:13> [2563] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:16:13> [2563] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:22:09> [2641] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:22:09> [2641] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:22:09> [2641] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:22:09> [2641] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:22:09> [2641] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:27:27> [2695] [1482] HSM_RSA_DecryptData - Parameter: iInputLength = [16] is invalid, it must be 128 - 256.
+<2015-07-31 00:27:27> [2695] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:33:25> [2711] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:33:25> [2711] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:33:25> [2711] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:33:25> [2711] [1533] HSM_RSA_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:33:25> [2711] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:34:19> [2721] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:34:19> [2721] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:34:19> [2721] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:34:19> [2721] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:34:19> [2721] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:57:23> [2785] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:57:23> [2785] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:57:23> [2785] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:57:23> [2785] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:57:23> [2785] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 00:59:02> [2797] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 00:59:02> [2797] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 00:59:02> [2797] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 00:59:02> [2797] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 00:59:02> [2797] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 01:46:37> [2879] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:46:37> [2879] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:46:37> [2879] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 01:46:37> [2879] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 01:46:37> [2879] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 01:46:37> [2879] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 01:46:37> [2879] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 01:50:57> [2888] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:50:57> [2888] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:50:57> [2888] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 01:50:57> [2888] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 01:50:57> [2888] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 01:50:57> [2888] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 01:50:57> [2888] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 01:53:42> [2901] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:53:42> [2901] [716] Tass_EncryptTrackData - pcKey_LMK is error
+<2015-07-31 01:53:42> [2901] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 01:53:42> [2901] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 01:53:42> [2901] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 01:53:42> [2901] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 01:53:42> [2901] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 01:56:53> [2948] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 01:56:53> [2948] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X0000000F].
+<2015-07-31 01:56:53> [2948] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [15], [0X0000000F].
+<2015-07-31 01:56:53> [2948] [1092] HSM_IC_SymmKeyEncryptData - Communicate with Hsm error, return code = [15], [0X0000000F].
+<2015-07-31 01:56:53> [2948] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 01:56:53> [2948] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 01:56:53> [2948] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 01:56:53> [2948] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 01:56:53> [2948] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 02:00:40> [2996] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 02:00:40> [2996] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X0000000F].
+<2015-07-31 02:00:40> [2996] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [15], [0X0000000F].
+<2015-07-31 02:00:40> [2996] [1092] HSM_IC_SymmKeyEncryptData - Communicate with Hsm error, return code = [15], [0X0000000F].
+<2015-07-31 02:00:40> [2996] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 02:00:40> [2996] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 02:00:40> [2996] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 02:00:40> [2996] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 02:00:40> [2996] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 02:01:32> [3028] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 02:01:32> [3028] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 02:01:32> [3028] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 02:01:32> [3028] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 02:01:32> [3028] [558] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-07-31 02:02:49> [3038] [562] ParseMsgHead - Response packet status code is not 0.
+<2015-07-31 02:02:49> [3038] [637] HsmCmd_TCP - Error: ParseMsgHead return code = [0X00000039].
+<2015-07-31 02:02:49> [3038] [868] TCP_CommunicateHsm_ex - Communicate with the server return code = [57], [0X00000039].
+<2015-07-31 02:02:49> [3038] [402] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [57], [0X00000039].
+<2015-07-31 02:02:49> [3038] [558] Tass_PRIVATE_Oper - DecryptData is fail

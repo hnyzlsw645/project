@@ -14,7 +14,7 @@ int main(void)
     void *phSessionHandle = NULL;
 
     //打开设备句柄
-    rv = SDF_OpenDevice(&phDeviceHandle, "192.168.9.124", 8018, 8);
+    rv = SDF_OpenDevice(&phDeviceHandle, "124.127.49.180", 8018, 8);
     if(rv)
     {
         printf("Open the device failed. return code = [%#010X].", rv);
@@ -222,12 +222,11 @@ rv = Tass_Disper_Zmk(
      printf("pcZmk_Lmk = [%s]\n",pcZmk_Lmk);
      printf("pcZmkCv = [%s]\n",pcZmkCv);
 #endif
-#if 0
    printf("\n================================磁道加密==========================================================\n");
-     char pcTrackText[] = "801617441513A2F135AB14EAAD1069DF";
+     char pcTrackText[128] = "801617441513A2F135AB14EAAD1069DF";
      int  iTrackTextLen = strlen(pcTrackText);
-     char pcIv[] = "0000000000000000";
-     char pcTrackCipher[128] = {};
+     char pcIv[128] = "0000000000000000";
+     char pcTrackCipher[256] = {};
      rv = Tass_EncryptTrackData(
        phSessionHandle,
        iKeyIdx,
@@ -250,7 +249,7 @@ rv = Tass_Disper_Zmk(
        iKeyIdx,
        pcZmkKey_LMK,
        pcTrackCipher,
-       iTrackTextLen,
+       strlen(pcTrackCipher),
        1,  
        0,  
        pcIv,
@@ -260,16 +259,16 @@ rv = Tass_Disper_Zmk(
         printf("return code = [%#010X].\n",rv);
        }   
         printf("pcTrackText = [%s]\n",pcTrackText);
-#endif
+
      printf("\n================================RSA/SM2私钥解密==========================================================\n");
-             
-       char indata[2048*2] = "B07A204291B7759F8921DDD2DC8CEEB2D065D3D61C3436245C2F3F2141B55739BC86A52DB2463AB6CE18A50E878FBCAC2CB045CDA325AABE9D338DA5F9708DF8F5701DE81115B77C7F9871022033354D7A38E0AF564931D3E17D0CBDFE4C267DEDFF3D9E06BD6A247544CC482A8497973D418D5C17DECC8B9DC3E723498FE8C7";
+       char Rsa_lmk[1024] = "4069A9B6950EDAD1B7C987253E385128"; 
+       char indata[1024] = "042A3B6B52F62B02AEDAE2DA028BD36F90E0DDF092A4722A0E76901372EB8D9F93632340C706125CB27331B163F578783FCF6BBA8AD9D68DA90EE2D05658EF8053D5FD6F1A23B1B1D8CFBDAEF9C5B9F9E13B8602364194135F179D4EB6645AA70FFC34A3740318200CBA9CDA83C098879A06DFDCC1BA8962DD0D";      
        char outdata[2048*2] = {};
-       char Rsa_lmk[1024] = "801617441513A2F135AB14EAAD1069DF";
+       //char Rsa_lmk[1024] = "801617441513A2F135AB14EAAD1069DF";
        char SM2_lmk[1024] = "801617441513A2F135AB14EAAD1069DF";
        rv = Tass_PRIVATE_Oper(
            phSessionHandle,
-           0,
+           1,
            Rsa_lmk,
            SM2_lmk,
            indata,
