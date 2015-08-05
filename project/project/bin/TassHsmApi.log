@@ -1,0 +1,23 @@
+<2015-08-03 15:24:29> [4086] [535] Tass_GenRSAKey - Rsa_D_ZMK Convert Hex fail
+<2015-08-03 16:02:07> [4378] [1433] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [41], [0X00000029].
+<2015-08-03 16:02:07> [4378] [677] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 16:02:11> [4378] [1433] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [41], [0X00000029].
+<2015-08-03 16:02:11> [4378] [677] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 16:07:02> [4430] [1433] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [43], [0X0000002B].
+<2015-08-03 16:07:02> [4430] [677] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 16:08:42> [4480] [1433] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [43], [0X0000002B].
+<2015-08-03 16:08:42> [4480] [678] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 16:16:42> [4528] [1433] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [41], [0X00000029].
+<2015-08-03 16:16:42> [4528] [678] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 16:18:22> [4571] [1435] HSM_RSA_EncryptData - Communicate with Hsm error, return code = [41], [0X00000029].
+<2015-08-03 16:18:22> [4571] [678] Tass_PubKey_Oper - EncryptData is error
+<2015-08-03 17:45:33> [5084] [405] HSM_SM2_DecryptData - Communicate with Hsm error, return code = [80], [0X00000050].
+<2015-08-03 17:45:33> [5084] [785] Tass_PRIVATE_Oper - DecryptData is fail
+<2015-08-03 17:52:07> [5147] [277] HSM_RCL_TransferCipherPin_Zpk2Lmk - Communicate with Hsm error, return code = [23], [0X00000017].
+<2015-08-03 17:52:07> [5147] [3461] Tass_Decrypt_PIN - Tass hsm api return code1 = [23], [0X00000017].
+<2015-08-03 17:52:11> [5147] [1719] HSM_IC_GenerateMac - Communicate with Hsm error, return code = [4], [0X00000004].
+<2015-08-03 17:52:11> [5147] [2118] Tass_Gen_ANSI_Mac - Tass hsm api return code = [4], [0X00000004].
+<2015-08-03 17:52:21> [5147] [1248] HSM_IC_SymmKeyDecryptData - Communicate with Hsm error, return code = [10], [0X0000000A].
+<2015-08-03 17:52:21> [5147] [916] Tass_DecryptTrackData - DecyptData fail
+<2015-08-03 18:41:03> [5274] [1719] HSM_IC_GenerateMac - Communicate with Hsm error, return code = [4], [0X00000004].
+<2015-08-03 18:41:03> [5274] [2123] Tass_Gen_ANSI_Mac - Tass hsm api return code = [4], [0X00000004].
