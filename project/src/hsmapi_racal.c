@@ -24,7 +24,7 @@
 #include "hsmapi_define.h"
 #include "hsmapi_log.h"
 #include "hsmapi_tools.h"
-#include "hsmapi_tcpcom.h"
+#include "hsmsocket.h"
 
 int HSM_RCL_GenerateRandomPin(char *pcPAN, int iPinLength, char *pcPinCipherByLmk/*out*/)
 {
@@ -53,7 +53,9 @@ int HSM_RCL_GenerateRandomPin(char *pcPAN, int iPinLength, char *pcPinCipherByLm
     p += 2;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -100,7 +102,7 @@ int HSM_RCL_EncryptPin_LMK(char *pcPlainPin, char *pcPAN, char *pcPinCipherByLmk
     p += rv;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -364,7 +366,9 @@ int HSM_RCL_TransferCipherPin_Zpk2Zpk(
     p += rv;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -435,7 +439,9 @@ int HSM_RCL_GenerateIBMPinOffset(
     p += 12;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -528,7 +534,9 @@ int HSM_RCL_VerifyZonePinBlock_PinOffset(
     p += 12;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -592,7 +600,9 @@ int HSM_RCL_GeneratePVV(
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -652,7 +662,9 @@ int HSM_RCL_GenerateCVV(
     p += 3;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -716,7 +728,9 @@ int HSM_RCL_VerifyCVV(
     p += 3;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -797,7 +811,9 @@ int HSM_RCL_EncryptData(
     p += iInputLength;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -909,7 +925,9 @@ int HSM_RCL_DecryptData(
     p += iInputLength;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1006,7 +1024,9 @@ int HSM_RCL_ZpkGenCbcMac(
     p += 2;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1090,7 +1110,9 @@ int HSM_RCL_ZakAndTakGenCbcMac(
     p += iInputLength;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1349,7 +1371,9 @@ int HSM_RCL_ExportKey_A8(
     *p ++ = cKeyFlg_Zmk;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1407,7 +1431,9 @@ int HSM_RCL_LoadFormatData(char* pcFormatData)
     p += strlen(pcFormatData);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1467,7 +1493,9 @@ int HSM_RCL_GenAndPrintKeyElement(char* pcKeyType, char cKeyFlg, char* pcPrintDo
     p += strlen(pcPrintDomain);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1566,7 +1594,9 @@ int HSM_RCL_SyntheticKey_KeyCipher(int iElementNum, char* pcKeyType, char cKeyFl
     p += strlen(pcKeyElemnet);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1634,7 +1664,9 @@ int HSM_RCL_KeyTypeConversion(
     *p ++ = cDstScheme;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1711,7 +1743,9 @@ int HSM_RCL_SynthesisKeyByPlaintext(
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1783,7 +1817,9 @@ int HSM_RCL_GenAndPrintKey(int iGenMode,
     p += strlen(pcPrintDomain);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);

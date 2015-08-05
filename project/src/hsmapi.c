@@ -2,12 +2,12 @@
 |    hsmapi.c                                                           |
 |    Version :     1.0                                                  |
 |    Author:       Luo Cangjian                                         |
-|    Description:  SJJ1310ÃÜÂë»ú½ğÈÚ½»Ò×Í¨ÓÃ½Ó¿Ú                        |
+|    Description:  SJJ1310å¯†ç æœºé‡‘èäº¤æ˜“é€šç”¨æ¥å£                        |
 |                                                                       |
 |    Copyright :   Beijing JN TASS Technology Co., Ltd.                 |
 |    data:         2015-06-05. Create                                   |
 |-----------------------------------------------------------------------|
-|    Modify History: TODO:ÃÜÔ¿³¤¶È£¬ÒÔ¼°Êı¾İ³¤¶ÈµÄÅĞ¶Ï»¹Ğè½øÒ»²½¼ì²é¡£  |
+|    Modify History: TODO:å¯†é’¥é•¿åº¦ï¼Œä»¥åŠæ•°æ®é•¿åº¦çš„åˆ¤æ–­è¿˜éœ€è¿›ä¸€æ­¥æ£€æŸ¥ã€‚  |
 |----------------------------------------------------------------------*/
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,25 +19,237 @@
 #include "hsmapi_log.h"
 #include "hsmapi_tools.h"
 #include "hsmapi_init.h"
-#include "hsmapi_tcpcom.h"
 #include "hsmapi_ic.h"
 #include "hsmapi_racal.h"
 #include "hsmapi_asym.h"
+#include "hsmsocket.h"
+#include "internal_structs.h"
+
+/***************************************************************************
+* Subroutine: SDF_OpenDevice
+* Function:   æ‰“å¼€è®¾å¤‡å¥æŸ„
+* Input:
+*    @pphDeviceHandle    è®¾å¤‡å¥æŸ„
+*    @pcIp               IPåœ°å€
+*    @iPort              ç«¯å£å·
+*    @iMsgHeadLen        æ¶ˆæ¯å¤´é•¿åº¦
+* Output:
+*    æ— 
+*
+* Return:       0 for success, other is error
+* Description:
+*
+* Author:       Luo Cangjian
+* Date:         2015.7.16
+* ModifyRecord:
+* *************************************************************************/
+int SDF_OpenDevice(void **phDeviceHandle, char *ipaddr, int port )
+{
+    int rt=0;
+    Devicestruct *pDeviceStruct;
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "Start...");
+#endif
+
+    if(ipaddr == NULL)
+    {
+        return HAR_PARAM_ISNULL;
+    }
+
+    if(port < 0)
+    {
+        return HAR_PARAM_VALUE;
+    }
+
+    if( *phDeviceHandle != NULL && ((Devicestruct*)(*phDeviceHandle))->status == 1 )
+    {
+        SDF_CloseDevice( phDeviceHandle );
+    }
+
+    pDeviceStruct = (Devicestruct*)malloc( sizeof(Devicestruct) );
+
+    memset( pDeviceStruct, 0, sizeof(Devicestruct) );
+    strncpy( pDeviceStruct->ip, ipaddr, 16 );
+    pDeviceStruct->port = port;
+
+    pDeviceStruct->sockfd = TCP_ConnectHsm( pDeviceStruct->ip, pDeviceStruct->port );
+    if( (pDeviceStruct->sockfd) <= 0 )
+    {
+        LOG_ERROR( "%s, Error TCP_ConnectHsm return [%d].",
+                __func__, pDeviceStruct->sockfd );
+        rt = HAR_SOCK_CONNECT;
+    }
+    else
+    {
+        pDeviceStruct->status = 1;
+        *phDeviceHandle = pDeviceStruct;
+        rt = HAR_OK;
+    }
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "End.\n");
+#endif
+
+    return rt;
+}
+
+
+/***************************************************************************
+* Subroutine: SDF_CloseDevice
+* Function:   å…³é—­è®¾å¤‡å¥æŸ„
+* Input:
+*    @phDeviceHandle    è®¾å¤‡å¥æŸ„
+* Output:
+*    æ— 
+*
+* Return:       0 for success, other is error
+* Description:
+*
+* Author:       Luo Cangjian
+* Date:         2015.7.16
+* ModifyRecord:
+* *************************************************************************/
+int SDF_CloseDevice(void *hDeviceHandle)
+{
+    int rt=0;
+    Devicestruct *pDeviceStruct = (Devicestruct*)hDeviceHandle;
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "Start...");
+#endif
+
+    if( pDeviceStruct != NULL && pDeviceStruct->status == 1 )
+    {
+        pDeviceStruct = (Devicestruct*)hDeviceHandle;
+        TCP_DisconnectHsm( pDeviceStruct->sockfd );
+        pDeviceStruct->status = 2;
+        free(pDeviceStruct);
+    }
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "End.\n");
+#endif
+
+    return rt;
+}
+
+
+/***************************************************************************
+* Subroutine: SDF_OpenSession
+* Function:   æ‰“å¼€ä¼šè¯å¥æŸ„
+* Input:
+*    @phDeviceHandle      è®¾å¤‡å¥æŸ„
+*    @pphSessionHandle    ä¼šè¯å¥æŸ„
+* Output:
+*    æ— 
+*
+* Return:       0 for success, other is error
+* Description:
+*
+* Author:       Luo Cangjian
+* Date:         2015.7.16
+* ModifyRecord:
+* *************************************************************************/
+int SDF_OpenSession(void *hDeviceHandle, void **phSessionHandle)
+{
+    int rt=0;
+    Devicestruct* pDeviceStruct = (Devicestruct*)hDeviceHandle;
+    Sessionstruct* pSessionStruct = NULL;
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "Start...");
+#endif
+
+    if( pDeviceStruct == NULL || pDeviceStruct->status != 1 )
+    {
+        rt = HAR_DEVICEHANDLE_INVALID;
+        LOG_ERROR( "%s, Error [%#X], DeviceHandle Inalid.",
+                __func__, rt );
+        return rt;
+    }
+
+    if( *phSessionHandle == NULL || ((Sessionstruct*)*phSessionHandle)->status != 1 )
+    {
+        pSessionStruct = (Sessionstruct*)malloc(sizeof(Sessionstruct));
+        pSessionStruct->device = (Devicestruct*)hDeviceHandle;
+        pSessionStruct->status = 1;
+        pSessionStruct->hashCtx.m_uiMechanism = -1;
+        *phSessionHandle = (void*)pSessionStruct;
+
+    }
+    if ( ((Sessionstruct*)*phSessionHandle)->status == 1 && ((Sessionstruct*)*phSessionHandle)->device != hDeviceHandle )
+    {
+        pSessionStruct->device = (Devicestruct*)hDeviceHandle;
+    }
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "End.\n");
+#endif
+
+    return rt;
+}
+
+/***************************************************************************
+* Subroutine: SDF_CloseSession
+* Function:   å…³é—­ä¼šè¯å¥æŸ„
+* Input:
+*    @phSessionHandle    ä¼šè¯å¥æŸ„
+* Output:
+*    æ— 
+*
+* Return:       0 for success, other is error
+* Description:  å…³é—­ä¼šè¯å¥æŸ„
+*
+* Author:       Luo Cangjian
+* Date:         2015.7.16
+* ModifyRecord:
+* *************************************************************************/
+int SDF_CloseSession(void *hSessionHandle)
+{
+    int rt=0;
+    Sessionstruct* pSessionStruct = (Sessionstruct*)hSessionHandle;
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "Start...");
+#endif
+
+    if( pSessionStruct != NULL && pSessionStruct->status == 1 )
+    {
+        if( pSessionStruct->hashCtx.m_uiMechanism != -1 )
+        {
+            free(pSessionStruct->hashCtx.pucData);
+            free(pSessionStruct->hashCtx.pucHash);
+            pSessionStruct->hashCtx.m_uiMechanism = -1;
+        }
+        pSessionStruct->status = 2;
+        pSessionStruct->device = NULL;
+        free(pSessionStruct);
+    }
+
+#ifdef TASS_DEBUG
+    Log_Debug("%s", "End.\n");
+#endif
+
+    return rt;
+}
+
+
 
 /***************************************************************************
  *   Subroutine: Tass_GenSm2Key
- *   Function:   Ëæ»úÉú³ÉRSAÃÜÔ¿¶Ô£¬²¢Ê¹ÓÃZMK¼ÓÃÜµ¼³ö
+ *   Function:   éšæœºç”ŸæˆRSAå¯†é’¥å¯¹ï¼Œå¹¶ä½¿ç”¨ZMKåŠ å¯†å¯¼å‡º
  *   Input:
- *     @hSessionHandle         »á»°¾ä±ú
- *     @zmkIndex               ÃÜÔ¿Ë÷Òı
- *     @zmk_Lmk                ±£»¤RSAÃÜÔ¿·ÖÁ¿µÄ±£»¤ÃÜÔ¿
- *     @zmk_disData            ZMK·ÖÉ¢²ÎÊı£¬NULLÊ±²»·ÖÉ¢
- *     @mode                   ¼ÓÃÜËã·¨Ä£Ê½
+ *     @hSessionHandle         ä¼šè¯å¥æŸ„
+ *     @zmkIndex               å¯†é’¥ç´¢å¼•
+ *     @zmk_Lmk                ä¿æŠ¤RSAå¯†é’¥åˆ†é‡çš„ä¿æŠ¤å¯†é’¥
+ *     @zmk_disData            ZMKåˆ†æ•£å‚æ•°ï¼ŒNULLæ—¶ä¸åˆ†æ•£
+ *     @mode                   åŠ å¯†ç®—æ³•æ¨¡å¼
  *   Output:
- *     @SM2_D_ZMK              Ë½Ô¿·ÖÁ¿DÃÜÎÄ 
- *     @SM2_PUBKEY             DER±àÂë¹«Ô¿
- *     @SM2_LMK		       LMKÏÂ¼ÓÃÜµÄË½Ô¿
- *   Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *     @SM2_D_ZMK              ç§é’¥åˆ†é‡Då¯†æ–‡ 
+ *     @SM2_PUBKEY             DERç¼–ç å…¬é’¥
+ *     @SM2_LMK               LMKä¸‹åŠ å¯†çš„ç§é’¥
+ *   Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *   Description:
  *   Author:       Luo Cangjian
  *   Date:         2015.06.05
@@ -54,71 +266,71 @@ Tass_GenSm2Key(
      char *SM2_PUBKEY/*out*/,
      char *SM2_LMK/*out*/)
 {
-	//¶¨Òå±äÁ¿
-	int rv = HAR_OK;
-	int piDerPublicKeyLen = 0;
-     	int piPrivateKeyLen_Lmk = 0;
-     	char SM2PUBKEY[512] = {0};
-     	char SM2LMK[512] = {0};
-     	char SM2DZMK[512] = {0};
-	int piPrivateKeyLen_Tk = 0;
-	int len = 0;
-	//¼ì²é²ÎÊı
-	if(zmkIndex >0 && strlen(zmk_Lmk) >=16 )
-	{
-		zmkIndex = 0;
-	}
-	if(strlen(zmk_disData) % 32 != 0)
-	{
-		LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
-		return rv;
-	}
-	if(mode <0 || mode >2)
-	{
-		mode = 0;
-	}
+    //å®šä¹‰å˜é‡
+    int rv = HAR_OK;
+    int piDerPublicKeyLen = 0;
+         int piPrivateKeyLen_Lmk = 0;
+         char SM2PUBKEY[512] = {0};
+         char SM2LMK[512] = {0};
+         char SM2DZMK[512] = {0};
+    int piPrivateKeyLen_Tk = 0;
+    int len = 0;
+    //æ£€æŸ¥å‚æ•°
+    if(zmkIndex >0 && strlen(zmk_Lmk) >=16 )
+    {
+        zmkIndex = 0;
+    }
+    if(strlen(zmk_disData) % 32 != 0)
+    {
+        LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
+        return rv;
+    }
+    if(mode <0 || mode >2)
+    {
+        mode = 0;
+    }
         
-	//·ÖÉ¢²ÎÊı
-      	int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
-	
-	//Éú³ÉSM2
-  	rv = HSM_SM2_GenerateNewKeyPair(
-           	   hSessionHandle,
-              	   9999, "",/**²úÉúsm2ÃÜÔ¿µÄË÷Òı£¬±êÇ©**/
-              	   SM2PUBKEY,/**ĞÂÉú³ÉµÄSM2¹«Ô¿£¬DER±àÂë**/ &piDerPublicKeyLen,
-                   SM2LMK,/**LMKÏÂ¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ**/  &piPrivateKeyLen_Lmk );
-     		
-     	//µ¼³öÃÜÔ¿
-	rv = HSM_SM2_ExportByTK(
+    //åˆ†æ•£å‚æ•°
+          int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
+    
+    //ç”ŸæˆSM2
+      rv = HSM_SM2_GenerateNewKeyPair(
+                  hSessionHandle,
+                     9999, "",/**äº§ç”Ÿsm2å¯†é’¥çš„ç´¢å¼•ï¼Œæ ‡ç­¾**/
+                     SM2PUBKEY,/**æ–°ç”Ÿæˆçš„SM2å…¬é’¥ï¼ŒDERç¼–ç **/ &piDerPublicKeyLen,
+                   SM2LMK,/**LMKä¸‹åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡**/  &piPrivateKeyLen_Lmk );
+             
+         //å¯¼å‡ºå¯†é’¥
+    rv = HSM_SM2_ExportByTK(
                   hSessionHandle,mode,
                   "000",/**KEK**/
-                  zmkIndex,/**<=0Ê¹ÓÃÏÂÒ»¸ö²ÎÊı,·ñÔòÊ¹ÓÃË÷Òı**/ zmk_Lmk,/**±£»¤ÃÜÔ¿**/
+                  zmkIndex,/**<=0ä½¿ç”¨ä¸‹ä¸€ä¸ªå‚æ•°,å¦åˆ™ä½¿ç”¨ç´¢å¼•**/ zmk_Lmk,/**ä¿æŠ¤å¯†é’¥**/
                   iTkDeriveNumber, zmk_disData,
-                  0,/*Òª±»µ¼³öµÄsm2Ë÷Òı*/
+                  0,/*è¦è¢«å¯¼å‡ºçš„sm2ç´¢å¼•*/
                   SM2PUBKEY, piDerPublicKeyLen,
                   SM2LMK, piPrivateKeyLen_Lmk,
                   SM2DZMK, &piPrivateKeyLen_Tk/*out*/ );
-    	
-	len = Tools_ConvertByte2HexStr(SM2PUBKEY,piDerPublicKeyLen,SM2_PUBKEY);
-    	if(!len)
-	{
-		LOG_ERROR("%S","SM2_PUBKEY Convert Hex fail");
-		return rv;
-	}
-	
-	len = Tools_ConvertByte2HexStr(SM2LMK,strlen(SM2LMK),SM2_LMK);
-   	
-	if(!len)
-	{
-		LOG_ERROR("%s","SM2_LMK Convert Hex fail");
-		return rv;
-	}
- 	
-	len = Tools_ConvertByte2HexStr(SM2DZMK,piPrivateKeyLen_Tk,SM2_D_ZMK);
-	if(!len)
-	{
-		LOG_ERROR("%S","SMK_D_ZMK Convert Hex fail");
-	}
+        
+    len = Tools_ConvertByte2HexStr(SM2PUBKEY,piDerPublicKeyLen,SM2_PUBKEY);
+        if(!len)
+    {
+        LOG_ERROR("%s","SM2_PUBKEY Convert Hex fail");
+        return rv;
+    }
+    
+    len = Tools_ConvertByte2HexStr(SM2LMK,strlen(SM2LMK),SM2_LMK);
+       
+    if(!len)
+    {
+        LOG_ERROR("%s","SM2_LMK Convert Hex fail");
+        return rv;
+    }
+     
+    len = Tools_ConvertByte2HexStr(SM2DZMK,piPrivateKeyLen_Tk,SM2_D_ZMK);
+    if(!len)
+    {
+        LOG_ERROR("%s","SMK_D_ZMK Convert Hex fail");
+    }
    return rv;
 
 }
@@ -126,17 +338,17 @@ Tass_GenSm2Key(
 
 /***************************************************************************
  *    Subroutine: Tass_DeriveKeyExportedByRsa
- *    Function:   ½«ZMK·ÖÉ¢²úÉú×ÓÃÜÔ¿£¬È»ºóÓÃ±£»¤ÃÜÔ¿½«×ÓÃÜÔ¿¼ÓÃÜ±£»¤µ¼³ö  
+ *    Function:   å°†ZMKåˆ†æ•£äº§ç”Ÿå­å¯†é’¥ï¼Œç„¶åç”¨ä¿æŠ¤å¯†é’¥å°†å­å¯†é’¥åŠ å¯†ä¿æŠ¤å¯¼å‡º  
  *    Input:
- *       @hSessionHandle         »á»°¾ä±ú
- *       @pcZmkCipher_Lmk        ´ı·ÖÉ¢µÄzmk
- *       @pcPublicKey            ±£»¤¹«Ô¿£¬Der±àÂëµÄRSA¹«Ô¿
- *       @pcDisData              ·ÖÉ¢Òò×Ó
+ *       @hSessionHandle         ä¼šè¯å¥æŸ„
+ *       @pcZmkCipher_Lmk        å¾…åˆ†æ•£çš„zmk
+ *       @pcPublicKey            ä¿æŠ¤å…¬é’¥ï¼ŒDerç¼–ç çš„RSAå…¬é’¥
+ *       @pcDisData              åˆ†æ•£å› å­
  *    Output:
- *       @pcSubKeyCipher_TK      ×ÓÃÜÔ¿ÃÜÎÄ
- *       @pcSubKeyCipher_Lmk     LMK¼ÓÃÜµÄ×ÓÃÜÔ¿ÃÜÎÄ
- *       @pcSubKeyCv             ×ÓÃÜÔ¿Ğ£ÑéÖµ
- *    Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *       @pcSubKeyCipher_TK      å­å¯†é’¥å¯†æ–‡
+ *       @pcSubKeyCipher_Lmk     LMKåŠ å¯†çš„å­å¯†é’¥å¯†æ–‡
+ *       @pcSubKeyCv             å­å¯†é’¥æ ¡éªŒå€¼
+ *    Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *    Description:
  *    Author:       Luo Cangjian
  *    Date:         2015.06.05
@@ -153,11 +365,11 @@ Tass_DeriveKeyExportedByRsa(
      char *pcSubKeyCv/*out*/)
 {
      int rv = 0;
-     //´Ë´¦ÓĞÎÊÌâ
+     //æ­¤å¤„æœ‰é—®é¢˜
      rv = HSM_IC_ExportCipherKey(
                   hSessionHandle,
                   0,
-                  "000",/*±£»¤ÃÜÔ¿ÀàĞÍ*/
+                  "000",/*ä¿æŠ¤å¯†é’¥ç±»å‹*/
                   9999, pcPublicKey,
                   0, "",
                   0, "",
@@ -173,25 +385,25 @@ Tass_DeriveKeyExportedByRsa(
 
 /***************************************************************************
  * Subroutine: Tass_GenRSAKey
- * Function:   Ëæ»úÉú³ÉRSAÃÜÔ¿¶Ô£¬²¢Ê¹ÓÃZMK¼ÓÃÜµ¼³ö
+ * Function:   éšæœºç”ŸæˆRSAå¯†é’¥å¯¹ï¼Œå¹¶ä½¿ç”¨ZMKåŠ å¯†å¯¼å‡º
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @RsaLen          RsaÃÜÔ¿Ä£³¤
- *   @zmkIndex        ±£»¤ÃÜÔ¿·ÖÉ¢Òò×Ó
- *   @zmk_Lmk         ±£»¤ÃÜÔ¿
- *   @zmk_disData     ±£»¤ÃÜÔ¿·ÖÉ¢Òò×Ó
- *   @mode            ¼ÓÃÜËã·¨Ä£Ê½ 0£ºECB 01:CBC
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @RsaLen          Rsaå¯†é’¥æ¨¡é•¿
+ *   @zmkIndex        ä¿æŠ¤å¯†é’¥åˆ†æ•£å› å­
+ *   @zmk_Lmk         ä¿æŠ¤å¯†é’¥
+ *   @zmk_disData     ä¿æŠ¤å¯†é’¥åˆ†æ•£å› å­
+ *   @mode            åŠ å¯†ç®—æ³•æ¨¡å¼ 0ï¼šECB 01:CBC
  * Output:
- *   @Rsa_D_ZMK       RSAÃÜÔ¿D·ÖÁ¿
- *   @Rsa_P_ZMK       RSAÃÜÔ¿P·ÖÁ¿
- *   @Rsa_Q_ZMK       RSAÃÜÔ¿Q·ÖÁ¿
- *   @Rsa_DP_ZMK      RSAÃÜÔ¿DP·ÖÁ¿
- *   @Rsa_DQ_ZMK      RSAÃÜÔ¿DQ·ÖÁ¿
- *   @Rsa_QINV_ZMK    RSAÃÜÔ¿QINV·ÖÁ¿
+ *   @Rsa_D_ZMK       RSAå¯†é’¥Dåˆ†é‡
+ *   @Rsa_P_ZMK       RSAå¯†é’¥Påˆ†é‡
+ *   @Rsa_Q_ZMK       RSAå¯†é’¥Qåˆ†é‡
+ *   @Rsa_DP_ZMK      RSAå¯†é’¥DPåˆ†é‡
+ *   @Rsa_DQ_ZMK      RSAå¯†é’¥DQåˆ†é‡
+ *   @Rsa_QINV_ZMK    RSAå¯†é’¥QINVåˆ†é‡
  *   @Rsa_N           RSA_N
  *   @Rsa_E           RSA_E
  *   @Rsa_LMK         RSA_LMK
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -215,92 +427,92 @@ Tass_GenRSAKey(
       char *Rsa_E/*out*/,
       char *Rsa_LMK/*out*/)
 {
-	//¶¨Òå±äÁ¿
-	int rv = HAR_OK;
-      	unsigned char pucDerPublicKey[512+32] = {0};
-      	char szDerPubKeyHex[1024] = {0};
-      	int piDerPublicKeyLen = 0;
-      	unsigned char pucPrivateKey_Lmk[512+32] = {0};
-      	unsigned char *piDerPublicKey[2048] = {0};
-      	int piPublicKey_mLen = 0;
-      	int piPublicKey_eLen = 0;
-      	int piPrivateKey_dLen = 0;
-      	int piPrivateKey_pLen = 0;
-      	int piPrivateKey_qLen = 0;
-      	int piPrivateKey_dpLen = 0;
-      	int piPrivateKey_dqLen = 0;
-      	int piPrivateKey_qInvLen = 0;
-      	char Rsa_N_m[512] = {0};//¹«Ô¿
-      	char Rsa_E_m[512] = {0};//Ö¸Êı
-      	char Rsa_D_ZMK_m[512] = {0};
-      	char Rsa_P_ZMK_m[512] = {0};
-      	char Rsa_Q_ZMK_m[512] = {0};
-      	char Rsa_DP_ZMK_m[512] = {0};
-      	char Rsa_DQ_ZMK_m[512] = {0};
-      	char Rsa_QINV_ZMK_m[512] = {0};
-	int piPrivateKeyLen_Lmk = 0;
-	//¼ì²é²ÎÊı
-	if(RsaLen < 1024 || RsaLen >4096)
-	{
-		LOG_ERROR("%s","RsaLen is error,it should between 2048 and 4096");
-		return rv;
-	}	
+    //å®šä¹‰å˜é‡
+    int rv = HAR_OK;
+          unsigned char pucDerPublicKey[512+32] = {0};
+          char szDerPubKeyHex[1024] = {0};
+          int piDerPublicKeyLen = 0;
+          unsigned char pucPrivateKey_Lmk[512+32] = {0};
+          unsigned char *piDerPublicKey[2048] = {0};
+          int piPublicKey_mLen = 0;
+          int piPublicKey_eLen = 0;
+          int piPrivateKey_dLen = 0;
+          int piPrivateKey_pLen = 0;
+          int piPrivateKey_qLen = 0;
+          int piPrivateKey_dpLen = 0;
+          int piPrivateKey_dqLen = 0;
+          int piPrivateKey_qInvLen = 0;
+          char Rsa_N_m[512] = {0};//å…¬é’¥
+          char Rsa_E_m[512] = {0};//æŒ‡æ•°
+          char Rsa_D_ZMK_m[512] = {0};
+          char Rsa_P_ZMK_m[512] = {0};
+          char Rsa_Q_ZMK_m[512] = {0};
+          char Rsa_DP_ZMK_m[512] = {0};
+          char Rsa_DQ_ZMK_m[512] = {0};
+          char Rsa_QINV_ZMK_m[512] = {0};
+    int piPrivateKeyLen_Lmk = 0;
+    //æ£€æŸ¥å‚æ•°
+    if(RsaLen < 1024 || RsaLen >4096)
+    {
+        LOG_ERROR("%s","RsaLen is error,it should between 2048 and 4096");
+        return rv;
+    }    
 
-	if(strlen(zmk_disData) % 32 != 0)
-	{
-		LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
-		return rv;
-	}
-	if(mode <0 || mode >2)
-	{
-		mode = 0;
-	}
-        //·ÖÉ¢²ÎÊı
-      	int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
-      	unsigned char Rsa_LMK_m[2048] = {0};
+    if(strlen(zmk_disData) % 32 != 0)
+    {
+        LOG_ERROR("%s","zmk_disData is error,it should be n*32H");
+        return rv;
+    }
+    if(mode <0 || mode >2)
+    {
+        mode = 0;
+    }
+        //åˆ†æ•£å‚æ•°
+          int iTkDeriveNumber = zmk_disData == NULL ? 0 : strlen(zmk_disData)/32;
+          unsigned char Rsa_LMK_m[2048] = {0};
       rv = HSM_RSA_GenerateNewKeyPair(
            hSessionHandle,
-           0, /**ÃÜÔ¿Ë÷Òı£¬0±íÊ¾²»´æ´¢**/
-           NULL, /**RSAÃÜÔ¿±êÇ©**/
-           RsaLen, /**ÃÜÔ¿Ä£³¤**/
-           NULL, /**¹«Ô¿Ö¸ÊıE £¬Ä¬ÈÏÎª65537**/
+           0, /**å¯†é’¥ç´¢å¼•ï¼Œ0è¡¨ç¤ºä¸å­˜å‚¨**/
+           NULL, /**RSAå¯†é’¥æ ‡ç­¾**/
+           RsaLen, /**å¯†é’¥æ¨¡é•¿**/
+           NULL, /**å…¬é’¥æŒ‡æ•°E ï¼Œé»˜è®¤ä¸º65537**/
            pucDerPublicKey/*out*/, 
            &piDerPublicKeyLen/*out*/,
-           Rsa_LMK_m/*out*/,/**LMKÏÂ¼ÓÃÜµÄRSAË½Ô¿ÃÜÎÄ**/ 
+           Rsa_LMK_m/*out*/,/**LMKä¸‹åŠ å¯†çš„RSAç§é’¥å¯†æ–‡**/ 
            &piPrivateKeyLen_Lmk/*out*/ );
-	
-	if(rv)
-    	{
-      		LOG_ERROR("%s","GenerateNewKeyPair is error");
-      		return rv;
-    	}
+    
+    if(rv)
+        {
+              LOG_ERROR("%s","GenerateNewKeyPair is error");
+              return rv;
+        }
         
-	int Rsa_N_Len = 0;
-  	int Rsa_E_Len = 0;
-  	unsigned char OutBuf[1024] = {0};
-        int len = Tools_ConvertByte2HexStr(pucDerPublicKey,piDerPublicKeyLen, szDerPubKeyHex);
-        //Ë½Ô¿×ªÂë
-	len = Tools_ConvertByte2HexStr(Rsa_LMK_m,piPrivateKeyLen_Lmk, Rsa_LMK);
+    int Rsa_N_Len = 0;
+    int Rsa_E_Len = 0;
+    unsigned char OutBuf[1024] = {0};
+    int len = Tools_ConvertByte2HexStr(pucDerPublicKey,piDerPublicKeyLen, szDerPubKeyHex);
+        //ç§é’¥è½¬ç 
+    len = Tools_ConvertByte2HexStr(Rsa_LMK_m,piPrivateKeyLen_Lmk, Rsa_LMK);
         
-	//½âÃÜDER±àÂë¹«Ô¿
+    //è§£å¯†DERç¼–ç å…¬é’¥
         rv =  Tools_DDer(szDerPubKeyHex,Rsa_N,&Rsa_N_Len,Rsa_E,&Rsa_E_Len);
        
-	 if(rv)
+     if(rv)
         {
            LOG_ERROR("%s","pucDerPublicKey Convert is error");
            return rv;
         }
       
-	rv = HSM_RSA_ExportRSAKey(
+    rv = HSM_RSA_ExportRSAKey(
                hSessionHandle,
                mode,  "000",
-               zmkIndex, zmk_Lmk,/**±£»¤ÃÜÔ¿Ë÷Òı£¬±£»¤ÃÜÔ¿£¬Ë÷ÒıÎª0ÔòÊ¹ÓÃÃÜÔ¿Öµ**/
+               zmkIndex, zmk_Lmk,/**ä¿æŠ¤å¯†é’¥ç´¢å¼•ï¼Œä¿æŠ¤å¯†é’¥ï¼Œç´¢å¼•ä¸º0åˆ™ä½¿ç”¨å¯†é’¥å€¼**/
                iTkDeriveNumber, zmk_disData,
                0,
-               Rsa_LMK_m/*±»µ¼³öË½Ô¿Êı¾İ*/, piPrivateKeyLen_Lmk/*Ë½Ô¿³¤¶È*/,
-               ""/*ÍØÕ¹±êÊ¶*/, "",/*PAD±êÊ¶*/
-               1/*¹«Ô¿Êä³ö¸ñÊ½£¬1ÎªDER±àÂë(Ä£ ¡¢Ö¸ÊıĞòÁĞ)*/,
-  	       "",/*³õÊ¼»¯ÏòÁ¿*/
+               Rsa_LMK_m/*è¢«å¯¼å‡ºç§é’¥æ•°æ®*/, piPrivateKeyLen_Lmk/*ç§é’¥é•¿åº¦*/,
+               ""/*æ‹“å±•æ ‡è¯†*/, "",/*PADæ ‡è¯†*/
+               1/*å…¬é’¥è¾“å‡ºæ ¼å¼ï¼Œ1ä¸ºDERç¼–ç (æ¨¡ ã€æŒ‡æ•°åºåˆ—)*/,
+              "",/*åˆå§‹åŒ–å‘é‡*/
                piDerPublicKey/*OUT*/, &piDerPublicKeyLen/*OUT*/,
                Rsa_N_m/*OUT*/, &piPublicKey_mLen/*OUT*/,
                Rsa_E_m/*OUT*/, &piPublicKey_eLen/*OUT*/,
@@ -311,66 +523,67 @@ Tass_GenRSAKey(
                Rsa_DQ_ZMK_m/*OUT*/, &piPrivateKey_dqLen/*OUT*/,
                Rsa_QINV_ZMK_m/*OUT*/, &piPrivateKey_qInvLen/*OUT*/);  
 
-   	if(rv)
-    	{
-      		LOG_ERROR("%s","Hsmapi ExportRSAKey is error");
-      		return rv;
-    	}
-	//×ªÂë
-	len = Tools_ConvertByte2HexStr(Rsa_D_ZMK_m,piPrivateKey_dLen,Rsa_D_ZMK); 
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_D_ZMK Convert Hex fail");
-      		return rv;
-    	}
-	len = Tools_ConvertByte2HexStr(Rsa_P_ZMK_m,piPrivateKey_pLen,Rsa_P_ZMK); 
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
-      		return rv;
-    	}
-	len = Tools_ConvertByte2HexStr(Rsa_Q_ZMK_m,piPrivateKey_qLen,Rsa_Q_ZMK); 
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
-      		return rv;
-    	}
-	len = Tools_ConvertByte2HexStr(Rsa_DP_ZMK_m,piPrivateKey_dpLen,Rsa_DP_ZMK); 
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_DP_ZMK Convert Hex fail");
-      		return rv;
-    	}
-	len = Tools_ConvertByte2HexStr(Rsa_DQ_ZMK_m,piPrivateKey_dLen,Rsa_DQ_ZMK); 
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_DQ_ZMK Convert Hex fail");
-      		return rv;
-    	}
-	len = Tools_ConvertByte2HexStr(Rsa_QINV_ZMK_m,piPrivateKey_qInvLen,Rsa_QINV_ZMK);
-	if(!len)
-    	{
-      		LOG_ERROR("%s","Rsa_QINV_ZMK COnvert Hex fail");
-      		return rv;
-    	}
+    if(rv)
+    {
+              LOG_ERROR("%s","Hsmapi ExportRSAKey is error");
+              return rv;
+    }
+    //è½¬ç 
+    len = Tools_ConvertByte2HexStr(Rsa_D_ZMK_m,piPrivateKey_dLen,Rsa_D_ZMK); 
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_D_ZMK Convert Hex fail");
+              return rv;
+    }
+    len = Tools_ConvertByte2HexStr(Rsa_P_ZMK_m,piPrivateKey_pLen,Rsa_P_ZMK); 
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
+              return rv;
+    }
+    len = Tools_ConvertByte2HexStr(Rsa_Q_ZMK_m,piPrivateKey_qLen,Rsa_Q_ZMK); 
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_P_ZMK Convert Hex fail");
+              return rv;
+    }
+    len = Tools_ConvertByte2HexStr(Rsa_DP_ZMK_m,piPrivateKey_dpLen,Rsa_DP_ZMK); 
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_DP_ZMK Convert Hex fail");
+              return rv;
+    }
+
+    len = Tools_ConvertByte2HexStr(Rsa_DQ_ZMK_m,piPrivateKey_dqLen,Rsa_DQ_ZMK); 
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_DQ_ZMK Convert Hex fail");
+              return rv;
+    }
+    len = Tools_ConvertByte2HexStr(Rsa_QINV_ZMK_m,piPrivateKey_qInvLen,Rsa_QINV_ZMK);
+    if(len == -1)
+    {
+              LOG_ERROR("%s","Rsa_QINV_ZMK COnvert Hex fail");
+              return rv;
+    }
 
     return rv; 
 }
 
 /***************************************************************************
  * Subroutine: Tass_PubKey_Oper
- * Function:   RSA/SM2¹«Ô¿¼ÓÃÜÔËËã½Ó¿Ú
+ * Function:   RSA/SM2å…¬é’¥åŠ å¯†è¿ç®—æ¥å£
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @keytype         ÃÜÔ¿ÀàĞÍ
- *   @indata          ÊäÈëÊı¾İ£¬Óë¹«Ô¿µÈ³¤
- *   @RSAPubKeyE      RSA¹«Ô¿
- *   @RSAPubKeyN      RSA¹«Ô¿
- *   @SM2PubKey       SM2¹«Ô¿
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @keytype         å¯†é’¥ç±»å‹
+ *   @indata          è¾“å…¥æ•°æ®ï¼Œä¸å…¬é’¥ç­‰é•¿
+ *   @RSAPubKeyE      RSAå…¬é’¥
+ *   @RSAPubKeyN      RSAå…¬é’¥
+ *   @SM2PubKey       SM2å…¬é’¥
  * Output:
- *   @outdata         ¼ÓÃÜºóÊı¾İ
+ *   @outdata         åŠ å¯†åæ•°æ®
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -379,117 +592,116 @@ Tass_GenRSAKey(
 HSMAPI int 
 Tass_PubKey_Oper(
      void *hSessionHandle,
-     int keytype,
+     int  keytype,
      char *indata,
      char *RSAPubKeyE,
      char *RSAPubKeyN,
      char *SM2PubKey,
      char *outdata/*out*/)
 {
-	//±äÁ¿¶¨Òå
-	int rv = HAR_OK;
- 	char aucInData[2048*2] = {0};
-  	unsigned char publicDer[512+32] = {0};
- 	int publicDerLen = 512+32;
- 	unsigned char pucInput[1024*2] = {0};
-  	unsigned char pucOutput[1024*2] = {0};
-  	int piOutputLength = 0;
-        int len = 0;	
-	unsigned char SM2PubKey_temp[1024] = {0};
+    //å˜é‡å®šä¹‰
+    int rv = HAR_OK;
+    char aucInData[2048*2] = {0};
+    unsigned char publicDer[512+32] = {0}; 
+    int publicDerLen = 512+32;
+    unsigned char pucInput[1024*2] = {0};
+    unsigned char pucOutput[1024*2] = {0};
+    int piOutputLength = 0;
+    int len = 0;    
+    unsigned char SM2PubKey_temp[1024] = {0};
 
-	//¼ì²é²ÎÊı
-	if(keytype != 0 && keytype != 1)
-	{
-		keytype = 0;
-	}
-	
- 	int indataLen =  Tools_ConvertHexStr2Byte(indata,strlen(indata),pucInput);
-	if(indataLen == -1)
-	{
-		LOG_ERROR("%s","indata Convert Byte fail");
-		return rv;
-	}
-	
-	
-	
-  	if(keytype == 0)
-   	{
-				
-  	//Der±àÂë
-		rv =  Tools_Der(RSAPubKeyN,RSAPubKeyE,publicDer,&publicDerLen);
-		if(strlen(RSAPubKeyN) != strlen(indata))
-		{
-			LOG_ERROR("%s","indata length is error,it should equals publicDerLen");
-			return rv;
-		}
-	//¼ÓÃÜÊı¾İ
-    		rv = HSM_RSA_EncryptData( 
-                	hSessionHandle,
-			0,/**²»Ìî³ä**/
-                	0, /**RSAÃÜÔ¿Ë÷Òı**/
-                	publicDer, publicDerLen,/**¹«Ô¿¼°¹«Ô¿³¤¶È**/
-                	pucInput, indataLen,/**ÊäÈëÊı¾İ**/
-                	pucOutput/*out*/, &piOutputLength/*out*/ );
+    //æ£€æŸ¥å‚æ•°
+    if(keytype != 0 && keytype != 1)
+    {
+        keytype = 0;
+    }
+    
+    int indataLen =  Tools_ConvertHexStr2Byte(indata,strlen(indata),pucInput);
+    if(indataLen == -1)
+    {
+        LOG_ERROR("%s","indata Convert Byte fail");
+        return HAR_HEX_TO_BYTE;
+    }
+    
+    
+    
+    if(keytype == 0)
+    {
+                
+      //Derç¼–ç 
+        rv =  Tools_Der(RSAPubKeyN,RSAPubKeyE,publicDer,&publicDerLen);
+        if(strlen(RSAPubKeyN) != strlen(indata))
+        {
+            LOG_ERROR("%s","indata length is error,it should equals publicDerLen");
+            return rv;
+        }
+        //Tools_PrintBuf("der public key ", publicDer, publicDerLen);
+    //åŠ å¯†æ•°æ®
+        rv = HSM_RSA_EncryptData( 
+                    hSessionHandle,
+                    0,/**ä¸å¡«å……**/
+                    0, /**RSAå¯†é’¥ç´¢å¼•**/
+                    publicDer, publicDerLen,/**å…¬é’¥åŠå…¬é’¥é•¿åº¦**/
+                    pucInput, indataLen,/**è¾“å…¥æ•°æ®**/
+                    pucOutput/*out*/, &piOutputLength/*out*/ );
 
-   	}
-  	else if(keytype == 1)
-   	{
-    		if(SM2PubKey == NULL)
-		{
-			LOG_ERROR("%S","SM2_PUBKEY is NULL");
-			return rv;
-		}
-		//×ªÂë
-		Tools_ConvertHexStr2Byte(SM2PubKey,strlen(SM2PubKey),SM2PubKey_temp);
-		int sm2DerLen = Tools_GetFieldDerBufLength(SM2PubKey_temp);
-		if(sm2DerLen == HAR_DER_DECODE)
-		{
-			LOG_ERROR("","get sm2DerLength fial");
- 			return rv;
-		}
-		rv = HSM_SM2_EncryptData(
-        	        hSessionHandle,0,
-                	SM2PubKey_temp, sm2DerLen,
-                	pucInput, indataLen,
-                	pucOutput/*out*/, &piOutputLength/*out*/ );
-
-   	}
-  	else
- 	{
-    		LOG_ERROR("%s", "keytype is error");
-   		 return rv;
-   	}
-  	
-	if(rv)
-	{
-		LOG_ERROR("%s","EncryptData is error");
-		return rv;
-	}
-	//×ªÂë
- 	len = Tools_ConvertByte2HexStr(pucOutput, strlen(pucOutput), outdata);
-	if(!len)
-	{
-		LOG_ERROR("%S","The outdata of Tass_PubKey_Oper  Convert Hex fail");
-		return rv;
-	}
-    return rv;
- 
+    }
+    else if(keytype == 1)
+    {
+            if(SM2PubKey == NULL)
+        {
+            LOG_ERROR("%s","SM2_PUBKEY is NULL");
+            return rv;
+        }
+        //è½¬ç 
+        Tools_ConvertHexStr2Byte(SM2PubKey,strlen(SM2PubKey),SM2PubKey_temp);
+        int sm2DerLen = Tools_GetFieldDerBufLength(SM2PubKey_temp);
+        if(sm2DerLen == HAR_DER_DECODE)
+        {
+            LOG_ERROR("","get sm2DerLength failed");
+             return rv;
+        }
+        rv = HSM_SM2_EncryptData(
+                    hSessionHandle,0,
+                    SM2PubKey_temp, sm2DerLen,
+                    pucInput, indataLen,
+                    pucOutput/*out*/, &piOutputLength/*out*/ );
+    }
+    else
+    {
+            LOG_ERROR("%s", "keytype is error");
+            return rv;
+    }
+      
+    if(rv)
+    {
+        LOG_ERROR("%s","EncryptData is error");
+        return rv;
+    }
+    //è½¬ç 
+    len = Tools_ConvertByte2HexStr(pucOutput, piOutputLength, outdata);
+    if(!len)
+    {
+        LOG_ERROR("%s","The outdata of Tass_PubKey_Oper  Convert Hex fail");
+        return rv;
+    }
+  return rv;
 }
 
 
 /***************************************************************************
  * Subroutine: Tass_PRIVATE_Oper
- * Function:   Ë½Ô¿½âÃÜÔËËã½Ó¿Ú¡£
+ * Function:   ç§é’¥è§£å¯†è¿ç®—æ¥å£ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @keytype         ÃÜÔ¿ÀàĞÍ,0Îªrsa,1Îªsm2
- *   @Rsa_LMK         rsa±¾µØÃÜÔ¿
- *   @SM2_LMK         sm2±¾µØÃÜÔ¿
- *   @indata          Íâ²¿ËÍÈëÊı¾İ
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @keytype         å¯†é’¥ç±»å‹,0ä¸ºrsa,1ä¸ºsm2
+ *   @Rsa_LMK         rsaæœ¬åœ°å¯†é’¥
+ *   @SM2_LMK         sm2æœ¬åœ°å¯†é’¥
+ *   @indata          å¤–éƒ¨é€å…¥æ•°æ®
  * Output:
- *   @outdata         Ë½Ô¿½âÃÜºóÊı¾İ
+ *   @outdata         ç§é’¥è§£å¯†åæ•°æ®
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -498,93 +710,113 @@ Tass_PubKey_Oper(
 HSMAPI int 
 Tass_PRIVATE_Oper(
      void *hSessionHandle,
-     int keytype,
+     int   keytype,
      char *Rsa_LMK,
      char *SM2_LMK,
      char *indata,
      char *outdata/*out*/)
  
 {
-	int rv = HAR_OK;
-  	int piOutputLength = 0;
-        char aucInData[2048*2] = {0};
-	int len = 0;
-	char Rsa_LMK_temp[1024] = {0};
-	char SM2_LMK_temp[1024] = {0};
+  //å®šä¹‰å˜é‡
+    int   rv = HAR_OK;
+    int   piOutputLength = 0;
+    char  aucInData[2048*2] = {0};
+    int   len = 0;
+    char  Rsa_LMK_temp[1024] = {0};
+    char  SM2_LMK_temp[1024] = {0};
+    char  outdata_temp[2048] = {0};
 
-	if(keytype != 1)
-	{
-		keytype = 0;
-	}
-	if(strlen(indata) <=0 || strlen(indata) > 2048)
-	{
-		LOG_ERROR("%s%","indata is error,it should between 0----2048");
-		return rv;
-	}
-	//×ªÂë	
-  	len =  Tools_ConvertHexStr2Byte(indata,strlen(indata),aucInData);
-        if(len == -1)
-	{
-		LOG_ERROR("%s","indata Covert Byte fail");
-		return rv;
-	}	
-	
- 	if(keytype == 0)
-  	 {
-		int RsaLen = Tools_ConvertHexStr2Byte(Rsa_LMK,strlen(Rsa_LMK),Rsa_LMK_temp);
-    		rv = HSM_RSA_DecryptData(hSessionHandle,
-			0,/**²»Ìî³ä**/
-    			9999,/**0»ò9999Ê±ÏÂÃæÁ½¸ö²ÎÊı¿ÉÓĞĞ§**/ 
-			Rsa_LMK_temp, RsaLen,/**Ë½Ô¿¼°Ë½Ô¿³¤¶È**/
-    			aucInData,     len,/**´ı½âÃÜµÄÊı¾İ¼°³¤¶È**/
- 			outdata/*out*/, &piOutputLength/*out*/ );
-  	 }
- 	else if(keytype == 1)
-   	{
-		int sm2Len = Tools_ConvertHexStr2Byte(SM2_LMK,strlen(SM2_LMK),SM2_LMK_temp);
-    		rv = HSM_SM2_DecryptData(hSessionHandle,
-   			9999, 
-			SM2_LMK_temp, sm2Len,
-    			aucInData, len,
-    			outdata/*out*/, &piOutputLength/*out*/ );
-   	}
-  	else
-   	{
-    		LOG_ERROR("%s", "keytype is error");
-   		 return rv;
-   	}	
- 	if(rv)
-	{
-		LOG_ERROR("%s","DecryptData is fail");
-		return rv;
-	} 
-  	len = Tools_ConvertByte2HexStr(outdata, strlen(outdata), outdata);
-	if(len == -1)
-	{
-		LOG_ERROR("%s%","outdata Convert Hex is fail");
-		return rv;
-	}
+    if(keytype != 1)
+    {
+        keytype = 0;
+    }
+    if(strlen(indata) <=0 || strlen(indata) > 2048)
+    {
+        LOG_ERROR("%s","indata is error,it should between 0----2048");
+        return HAR_PARAM_LEN;
+    }
+    //è½¬ç     
+    len = Tools_ConvertHexStr2Byte(indata,strlen(indata),aucInData);
+
+    if(len == -1)
+    {
+        LOG_ERROR("%s","indata Covert Byte failed");
+        return HAR_HEX_TO_BYTE;
+    }    
+    
+   if(keytype == 0)
+    {
+      int RsaLen = Tools_ConvertHexStr2Byte(Rsa_LMK,strlen(Rsa_LMK),Rsa_LMK_temp);
+      if(RsaLen == -1)
+      {
+        LOG_ERROR("%s","Rsa_LMK Covert Byte failed");
+        return HAR_HEX_TO_BYTE;
+      }
+      rv = HSM_RSA_DecryptData(hSessionHandle,
+                0,/**ä¸å¡«å……**/
+                9999,/**0æˆ–9999æ—¶ä¸‹é¢ä¸¤ä¸ªå‚æ•°å¯æœ‰æ•ˆ**/ 
+                Rsa_LMK_temp, RsaLen,/**ç§é’¥åŠç§é’¥é•¿åº¦**/
+                aucInData, len,/**å¾…è§£å¯†çš„æ•°æ®åŠé•¿åº¦**/
+                outdata_temp/*out*/, &piOutputLength/*out*/ );
+     }
+     else if(keytype == 1)
+     {
+        if(strlen(indata) < 184 || strlen(indata) > 1996*2)
+        {
+            LOG_ERROR("%s","indata length is error ,it should between 96 and 1996 bytes ");
+            return HAR_PARAM_LEN;
+        }
+        int sm2Len = Tools_ConvertHexStr2Byte(SM2_LMK,strlen(SM2_LMK),SM2_LMK_temp);
+        if(sm2Len == -1)
+        {
+            LOG_ERROR("%s","SM2_LMK Covert Byte failed");
+            return HAR_HEX_TO_BYTE;
+        }
+        rv = HSM_SM2_DecryptData(hSessionHandle,
+               9999, /**SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ**/
+               SM2_LMK_temp, /**LMKåŠ å¯†çš„SM2ç§é’¥**/
+               sm2Len, /**LMKåŠ å¯†çš„SM2ç§é’¥é•¿åº¦**/
+               aucInData, len,
+               outdata_temp/*out*/, &piOutputLength/*out*/ );
+     }
+     else
+     {
+            LOG_ERROR("%s", "keytype is error");
+            return HAR_PARAM_KEY_TYPE;
+     }    
+
+     if(rv)
+     {
+        LOG_ERROR("%s","DecryptData is fail");
+        return rv;
+     } 
+     len = Tools_ConvertByte2HexStr(outdata_temp, piOutputLength, outdata);
+     if(len == -1)
+     {
+        LOG_ERROR("%s","outdata Convert Hex is failed");
+        return HAR_BYTE_TO_HEX;
+     }
   return rv;
 
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenerateRandom
-* Function:   ²úÉúËæ»úÊı
+* Subroutine: SDF_GenerateRandom
+* Function:   äº§ç”Ÿéšæœºæ•°
 * Input:
-*   @hSessionHandle  »á»°¾ä±ú
-*   @iRandomLen      Ëæ»úÊı×Ö½ÚÊı
+*   @hSessionHandle  ä¼šè¯å¥æŸ„
+*   @iRandomLen      éšæœºæ•°å­—èŠ‚æ•°
 * Output:
-*   @pcRandom        Ëæ»úÊı¾İ£¨Ê®½øÖÆ×Ö·û´®£©
+*   @pcRandom        éšæœºæ•°æ®ï¼ˆåè¿›åˆ¶å­—ç¬¦ä¸²ï¼‰
 *
-* Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
+SDF_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 {
     int     rv = HAR_OK;
     int     len = 0;
@@ -621,19 +853,19 @@ Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/)
 
 /***************************************************************************
  * Subroutine: Tass_DecryptTrackData
- * Function:   Ê¹ÓÃZEK½âÃÜ´ÅµÀÊı¾İ¡£
+ * Function:   ä½¿ç”¨ZEKè§£å¯†ç£é“æ•°æ®ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @iKeyIdx         ÃÜÔ¿Ë÷Òı
- *   @pcKey_LMK       ÃÜÔ¿ÃÜÎÄ
- *   @pcTrackText     ´ÅµÀÃÜÎÄ
- *   @iTrackTextLen   ´ÅµÀÃÜÎÄ³¤¶È
- *   @iAlgId          ½âÃÜÄ£Ê½
- *   @pcIV            ³õÊ¼»¯IV 
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @iKeyIdx         å¯†é’¥ç´¢å¼•
+ *   @pcKey_LMK       å¯†é’¥å¯†æ–‡
+ *   @pcTrackText     ç£é“å¯†æ–‡
+ *   @iTrackTextLen   ç£é“å¯†æ–‡é•¿åº¦
+ *   @iAlgId          è§£å¯†æ¨¡å¼
+ *   @pcIV            åˆå§‹åŒ–IV 
  * Output:
- *   @pcTrackCipher   ´ÅµÀÃ÷ÎÄ
+ *   @pcTrackCipher   ç£é“æ˜æ–‡
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -651,50 +883,51 @@ Tass_DecryptTrackData(
      char *pcIV,
      char *pcTrackText/*out*/)
 {
-	int rv = HAR_OK;
-    	int iOutDataLen = 0;
-    	int iInDataLen = 0;
-	int len = 0;
-    	unsigned char aucInData[1024 * 2] = {0};
-    	unsigned char aucOutData[1024 * 4] = {0};
-    	int piOutputLength= 0;
-	//¼ì²é²ÎÊı	
-	if(strlen(pcTrackCipher)%2 != 0)
-	{
-		LOG_ERROR("%s","pcTrackCipher length is error");
-		return rv;
-	}
-	if(iAlgId == 2 && strlen(pcIV) == 0)
-	{
-		LOG_ERROR("%s","the pcIV length is error");
-		return rv;
-	}
-    	len =  Tools_ConvertHexStr2Byte(pcTrackCipher,strlen(pcTrackCipher),aucInData);
-	if(len == -1)
-	{
-		LOG_ERROR("%s","PcTrackCipher Convert Byte fail");
-		return rv;
-	}
-    	rv = HSM_IC_SymmKeyDecryptData(hSessionHandle,
-    			iAlgId,/**Ëã·¨Ä£Ê½**/
-			"00B",/**ÃÜÔ¿ÀàĞÍ**/
-			iKeyIdx, pcKey_LMK,/**ÃÜÔ¿**/
-    			"",/**·ÖÉ¢Òò×Ó**/ 
-			0, "",/**»á»°ÃÜÔ¿**/
-    			iPadFlg, pcIV,/**Ìî³äÄ£Ê½**/
-    			aucInData, len,
-    			pcTrackText/*out*/, &piOutputLength/*out*/ );
-	if(rv)
-	{
-		LOG_ERROR("%s","DecyptData fail");
-		return rv;
-	}	
-   	len = Tools_ConvertByte2HexStr(pcTrackText, piOutputLength, pcTrackText);
-	if(len == -1)
-	{
-		LOG_ERROR("%s","pcTrackText Convert HexStr fail");
-		return rv;
-   	}
+    int rv = HAR_OK;
+    int iOutDataLen = 0;
+    int iInDataLen = 0;
+    int len = 0;
+    unsigned char aucInData[1024 * 2] = {0};
+    unsigned char aucOutData[1024 * 4] = {0};
+    int piOutputLength= 0;
+    //æ£€æŸ¥å‚æ•°    
+    if(strlen(pcTrackCipher)%2 != 0)
+    {
+        LOG_ERROR("%s","pcTrackCipher length is error");
+        return HAR_PARAM_LEN;
+    }
+    if(iAlgId == 2 && strlen(pcIV) == 0)
+    {
+        LOG_ERROR("%s","the pcIV length is error");
+        return HAR_PARAM_IV;
+    }
+    len =  Tools_ConvertHexStr2Byte(pcTrackCipher,strlen(pcTrackCipher),aucInData);
+    if(len == -1)
+    {
+        LOG_ERROR("%s","PcTrackCipher Convert Byte fail");
+        return HAR_HEX_TO_BYTE;
+    }
+    rv = HSM_IC_SymmKeyDecryptData(hSessionHandle,
+                iAlgId,/**ç®—æ³•æ¨¡å¼**/
+                "00A",/**å¯†é’¥ç±»å‹**/
+                iKeyIdx, pcKey_LMK,/**å¯†é’¥**/
+                "",/**åˆ†æ•£å› å­**/ 
+                0, "",/**ä¼šè¯å¯†é’¥**/
+                iPadFlg, pcIV,/**å¡«å……æ¨¡å¼**/
+                aucInData, len,
+                aucOutData/*out*/, &piOutputLength/*out*/ );
+    if(rv)
+    {
+        LOG_ERROR("%s","DecyptData failed");
+        return rv;
+    }
+
+    len = Tools_ConvertByte2HexStr(aucOutData, piOutputLength, pcTrackText);
+    if(len == -1)
+    {
+        LOG_ERROR("%s","pcTrackText Convert HexStr fail");
+        return HAR_BYTE_TO_HEX;
+    }
    return rv;
     
 }
@@ -704,19 +937,19 @@ Tass_DecryptTrackData(
 
 /*************************************************************************
  * Subroutine: Tass_EncryptTrackData
- * Function:   Ê¹ÓÃZEK¼ÓÃÜ´ÅµÀÊı¾İ¡£
+ * Function:   ä½¿ç”¨ZEKåŠ å¯†ç£é“æ•°æ®ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @iKeyIdx         ÃÜÔ¿Ë÷Òı
- *   @pcKey_LMK       ÃÜÔ¿ÃÜÎÄ
- *   @pcTrackText     ´ÅµÀÃÜÎÄ
- *   @iTrackTextLen   ´ÅµÀÃÜÎÄ³¤¶È
- *   @iAlgId          ½âÃÜÄ£Ê½
- *   @pcIV            ³õÊ¼»¯IV 
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @iKeyIdx         å¯†é’¥ç´¢å¼•
+ *   @pcKey_LMK       å¯†é’¥å¯†æ–‡
+ *   @pcTrackText     ç£é“å¯†æ–‡
+ *   @iTrackTextLen   ç£é“å¯†æ–‡é•¿åº¦
+ *   @iAlgId          è§£å¯†æ¨¡å¼
+ *   @pcIV            åˆå§‹åŒ–IV 
  * Output:
- *   @pcTrackCipher   ´ÅµÀÃÜÎÄ
+ *   @pcTrackCipher   ç£é“å¯†æ–‡
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -734,176 +967,75 @@ Tass_EncryptTrackData(
      char *pcIV,
      char *pcTrackCipher/*out*/)
 {
-	int     rv = HAR_OK;
-        int     iOutDataLen = 0;
-    	int     iInDataLen = 0;
-	int     len = 0;
-    	unsigned char aucInData[1024 * 2] = {0};
-    	unsigned char aucOutData[1024 * 4] = {0};
-    	int piOutputLength = 0;
-	if(strlen(pcTrackText)%2 != 0)
-	{
-		LOG_ERROR("%s","the length of pcTrackText is error");
-		return rv;
-	}
-	if(iAlgId == 2 && strlen(pcIV) == 0)
-	{
-		LOG_ERROR("%s","pcIV length is error");
-		return rv;
-	}
-	if(strlen(pcTrackCipher)%2 != 0)
-	{
-		LOG_ERROR("%s","pcTrackCipher length is error");
-		return rv;
-	}
-    	//ÊäÈëÊı¾İ×ªÎª¶ş½øÖÆ
-	//ÊäÈëÊı¾İ×ª»¯
-    	len =  Tools_ConvertHexStr2Byte(pcTrackText,strlen(pcTrackText),aucInData);
-	if(len == -1)
-	{
-		LOG_ERROR("%s","pcTrackText Convert byte fail");
-		return rv;
-	}
-    	rv = HSM_IC_SymmKeyEncryptData(hSessionHandle,
-    			iAlgId,/**Ëã·¨Ä£Ê½**/
-			"000",/**ÃÜÔ¿ÀàĞÍ**/
-			iKeyIdx, pcKey_LMK,/**¼ÓÃÜÊı¾İµÄÃÜÔ¿**/
-    			"",/**·ÖÉ¢²ÎÊı**/
-			 0, "",/**»á»°ÃÜÔ¿**/
-    			iPadFlg, pcIV,/**Ìî³äÄ£Ê½¼°³õÊ¼ÏòÁ¿**/
-    			aucInData, len,/**´ÅµÀÃ÷ÎÄ£¬¼°³¤¶È**/
-    			aucOutData/*out*/, &piOutputLength/*out*/ );
-    	//×ªÎªÊ®Áù½øÖÆ
-    	len = Tools_ConvertByte2HexStr(aucOutData, piOutputLength, pcTrackCipher);
-	if(len == -1)
-	{
-		
-		LOG_ERROR("%s","pcTrackCipher Covert HexStr fail");
-		return rv;
-	}
+    int     rv = HAR_OK;
+    int     iOutDataLen = 0;
+    int     iInDataLen = 0;
+    int     len = 0;
+    unsigned char aucInData[1024 * 2] = {0};
+    unsigned char aucOutData[1024 * 4] = {0};
+    int piOutputLength = 0;
+    if(strlen(pcTrackText)%2 != 0)
+    {
+        LOG_ERROR("%s","the length of pcTrackText is error");
+        return HAR_PARAM_LEN;
+    }
+    if(iAlgId == 2 && strlen(pcIV) == 0)
+    {
+        LOG_ERROR("%s","pcIV length is error");
+        return HAR_PARAM_IV;
+    }
+    if(strlen(pcTrackCipher)%2 != 0)
+    {
+        LOG_ERROR("%s","pcTrackCipher length is error");
+        return HAR_PARAM_LEN;
+    }
+    //è¾“å…¥æ•°æ®è½¬ä¸ºäºŒè¿›åˆ¶
+    //è¾“å…¥æ•°æ®è½¬åŒ–
+    len =  Tools_ConvertHexStr2Byte(pcTrackText,strlen(pcTrackText),aucInData);
+    if(len == -1)
+    {
+        LOG_ERROR("%s","pcTrackText Convert byte fail");
+        return HAR_HEX_TO_BYTE;
+    }
+    rv = HSM_IC_SymmKeyEncryptData(hSessionHandle,
+                iAlgId,/**ç®—æ³•æ¨¡å¼**/
+                "00A",/**å¯†é’¥ç±»å‹**/
+                iKeyIdx, pcKey_LMK,/**åŠ å¯†æ•°æ®çš„å¯†é’¥**/
+                "",/**åˆ†æ•£å‚æ•°**/
+                0, "",/**ä¼šè¯å¯†é’¥**/
+                iPadFlg, pcIV,/**å¡«å……æ¨¡å¼åŠåˆå§‹å‘é‡**/
+                aucInData, len,/**ç£é“æ˜æ–‡ï¼ŒåŠé•¿åº¦**/
+                aucOutData/*out*/, &piOutputLength/*out*/ );
+    //è½¬ä¸ºåå…­è¿›åˆ¶ 
+    len = Tools_ConvertByte2HexStr(aucOutData, piOutputLength, pcTrackCipher);
+    if(len == -1)
+    {
+        
+        LOG_ERROR("%s","pcTrackCipher Covert HexStr fail");
+        return HAR_BYTE_TO_HEX;
+    }
     return rv;
 } 
-
-/***************************************************************************
-* Subroutine: Tass_Disper_Zmk
-* * Function:   ÓÉÒ»¸öZMK·ÖÉ¢Éú³ÉÁíÍâÒ»¸ö×ÓÃÜÔ¿£¬²¢Í¨¹ıZMKÃÜÔ¿¼ÓÃÜ±£»¤µ¼³ö
-* * Input:
-* *   @hSessionHandle  »á»°¾ä±ú
-* *   @iKeyIdx         ÃÜÔ¿Ë÷Òı
-* *   @pcKey_LMK       ÃÜÔ¿ÃÜÎÄ
-* *   @pcDisData       ·ÖÉ¢²ÎÊı
-* * Output:
-* *   @pcZmk_LMK       ZMKÃÜÎÄ
-* *   @pcZmk_ZMK       ZMK±£»¤·ÖÉ¢µÄ×ÓÃÜÔ¿µ¼³ö
-* *   @pcZmkCv         ÃÜÔ¿Ğ£ÑéÖµ
-* *
-* * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* * Description:
-* * Author:       Luo Cangjian
-* * Date:         2015.06.05
-* * ModifyRecord:
-****************************************************************************/
-HSMAPI int
-Tass_Disper_Zmk(
-    void *hSessionHandle, 
-    int iKeyIdx,
-    char *pcKey_LMK,
-    char *pcDisData,
-    int iZmkIdx,
-    char *pcZmkKey_LMK,
-    char *pcZmk_ZMK/*out*/,
-    char *pcZmk_LMK/*out*/, 
-    char *pcZmkCv/*out*/)
-{
-    int  rv = HAR_OK;
-    int  len = 0;
-    if(strlen(pcDisData)%2 != 0)
-       {
-         LOG_ERROR("Param pcDisData length is error",rv,rv);
-         return rv;
-       }   
-    int iEncryptMode = 0;
-    char pcSrcKeyType[4] = "000";
-    int iSrcKeyDeriveNum = 0;
-    int iSrcSessionMode = 0;
-    char pcSrcSessionData[128] = {};
-    char pcDstKeyType[3+1] = "000";
-    int iDstKeyDeriveNumber = strlen(pcDisData)/32;
-    char pcCipherDstKey[128] ={0};
-    char pcDstKeyCv[18] ={0};
-    
-    rv = HSM_IC_ExportCipherKey(
-    	hSessionHandle,
-	iEncryptMode,
-    	pcSrcKeyType,
-        iKeyIdx, pcKey_LMK,	/*** ±£»¤ÃÜÔ¿ ***/
-    	iSrcKeyDeriveNum, "",
-    	iZmkIdx, "",/*»á»°ÃÜÔ¿*/
-    	pcDstKeyType,
-        0, pcZmkKey_LMK, /*** ´ıµ¼³öµÄÃÜÔ¿ ***/
-    	iDstKeyDeriveNumber, pcDisData,
-    	"",
-    	pcZmk_ZMK/*out*/, pcDstKeyCv/*out*/);
-    
-     if(rv)
-    {
-        LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
-        return rv;
-    }
-    unsigned char pcZmk_ZMK_1[128] = {0};
-    unsigned char *p = pcZmk_ZMK_1;
-    if(strlen(pcZmk_ZMK)/16 < 1)
-    {
-      LOG_ERROR("Tass hsm api return code = [%d],[%#010X].",rv,rv);
-      return rv;
-    }
-    if(strlen(pcZmk_ZMK)/32 >= 1)
-    {
-      *p ++ = 'X';
-       memcpy(p, pcZmk_ZMK,strlen(pcZmk_ZMK));
-       pcZmk_ZMK = pcZmk_ZMK_1;
-    }
-  
-    rv = HSM_RCL_ImportKey_A6(
-    	hSessionHandle,
-    	"000",
-	 iZmkIdx,
-	 pcZmkKey_LMK,
-         pcZmk_ZMK,
-	 strlen(pcZmk_ZMK)/16>=2 ? 'X':'Z',
-	 'N',
-    	  0,
-	 "",
-	 pcZmk_LMK,
-    	pcZmkCv/*OUT*/);
-    if(rv)
-    {
-        LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
-        return rv;
-    }
-
-    return rv;
-}
 
 
 
 
 /***************************************************************************
 * Subroutine: Tass_VerifyARQC
-* Function:   ÑéÖ¤ARQC/TC
+* Function:   éªŒè¯ARQC/TC
 * Input:
-*    @iKeyIdx               ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk      ÃÜÔ¿ÃÜÎÄ
+*    @iKeyIdx               å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk      å¯†é’¥å¯†æ–‡
 *    @pcPan                 PAN
 *    @pcATC                 ATC
-*    @pcTransData           ½»Ò×Êı¾İ
-*    @pcARQC                ´ıÑéÖ¤µÄARQC
+*    @pcTransData           äº¤æ˜“æ•°æ®
+*    @pcARQC                å¾…éªŒè¯çš„ARQC
 * Output:
-*    ÎŞ
+*    æ— 
 *
-* Return:      ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ·ÖÉ¢MDKÔ´ÃÜÔ¿²úÉú¿¨Æ¬Ö÷ÃÜÔ¿UDK£¬¸ù¾İATCÖµ¼ÆËã½»Ò×»á»°ÃÜÔ¿SDK£»
-*              Ìî³ä½»Ò×Êı¾İ£¬Ê¹ÓÃSDK¼ÆËãÆäMACÖµ£¬ÓëÊäÈëµÄARQC¶Ô±È¡£
+* Return:      æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: åˆ†æ•£MDKæºå¯†é’¥äº§ç”Ÿå¡ç‰‡ä¸»å¯†é’¥UDKï¼Œæ ¹æ®ATCå€¼è®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥SDKï¼›
+*              å¡«å……äº¤æ˜“æ•°æ®ï¼Œä½¿ç”¨SDKè®¡ç®—å…¶MACå€¼ï¼Œä¸è¾“å…¥çš„ARQCå¯¹æ¯”ã€‚
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -999,20 +1131,20 @@ Tass_VerifyARQC(
 
 /***************************************************************************
 * Subroutine: Tass_GenARPC
-* Function:   ¼ÆËãARPC
+* Function:   è®¡ç®—ARPC
 * Input:
-*    @iKeyIdx               ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk      ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıºÅÎª0Ê±ÓĞĞ§
-*    @pcPan                 ¿¨ºÅºÍ¿¨ĞòÁĞºÅ
-*    @pcATC                 Ó¦ÓÃ½»Ò×¼ÆÊıÆ÷£¬ÓÃÓÚ¼ÆËã½»Ò×»á»°ÃÜÔ¿
+*    @iKeyIdx               å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk      å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å·ä¸º0æ—¶æœ‰æ•ˆ
+*    @pcPan                 å¡å·å’Œå¡åºåˆ—å·
+*    @pcATC                 åº”ç”¨äº¤æ˜“è®¡æ•°å™¨ï¼Œç”¨äºè®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥
 *    @pcARQC                ARQC
 *    @pcARC                 ARC
 * Output:
-*    @pcARPC                Êä³öµÄARPC
+*    @pcARPC                è¾“å‡ºçš„ARPC
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ·ÖÉ¢MDKÔ´ÃÜÔ¿²úÉú¿¨Æ¬Ö÷ÃÜÔ¿UDK£¬¸ù¾İATCÖµ¼ÆËã½»Ò×»á»°ÃÜÔ¿SDK£»
-*              ×éÖ¯ARPCÊı¾İ£¬ÓÃSDK¼ÓÃÜÊı¾İ£¬¼ÆËãARPC¡£
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: åˆ†æ•£MDKæºå¯†é’¥äº§ç”Ÿå¡ç‰‡ä¸»å¯†é’¥UDKï¼Œæ ¹æ®ATCå€¼è®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥SDKï¼›
+*              ç»„ç»‡ARPCæ•°æ®ï¼Œç”¨SDKåŠ å¯†æ•°æ®ï¼Œè®¡ç®—ARPCã€‚
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -1093,7 +1225,7 @@ Tass_GenARPC(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ¸Ãº¯ÊıÄ£Ê½±êÖ¾Ó¦¸ÃÎª2 ***/
+    /*** è¯¥å‡½æ•°æ¨¡å¼æ ‡å¿—åº”è¯¥ä¸º2 ***/
     rv = HSM_IC_GenerateArpc(
             iKeyIdx,
             szKeyCipher,
@@ -1112,21 +1244,21 @@ Tass_GenARPC(
 
 /***************************************************************************
 * Subroutine: Tass_VerifyARQC_GenARPC
-* Function:   ÑéÖ¤ARQC/TC²¢²úÉúARPC
+* Function:   éªŒè¯ARQC/TCå¹¶äº§ç”ŸARPC
 * Input:
-*    @iKeyIdx               ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk      ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıºÅÎª0Ê±ÓĞĞ§
-*    @pcPan                 ¿¨ºÅºÍ¿¨ĞòÁĞºÅ
-*    @pcATC                 Ó¦ÓÃ½»Ò×¼ÆÊıÆ÷£¬ÓÃÓÚ¼ÆËã½»Ò×»á»°ÃÜÔ¿
-*    @pcTransData           ARQCÊı¾İ
+*    @iKeyIdx               å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk      å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å·ä¸º0æ—¶æœ‰æ•ˆ
+*    @pcPan                 å¡å·å’Œå¡åºåˆ—å·
+*    @pcATC                 åº”ç”¨äº¤æ˜“è®¡æ•°å™¨ï¼Œç”¨äºè®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥
+*    @pcTransData           ARQCæ•°æ®
 *    @pcARQC                ARQC
 *    @pcARC                 ARC
 * Output:
-*    @pcARPC                Êä³öµÄARPC
+*    @pcARPC                è¾“å‡ºçš„ARPC
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ·ÖÉ¢MDKÔ´ÃÜÔ¿²úÉú¿¨Æ¬Ö÷ÃÜÔ¿UDK£¬¸ù¾İATCÖµ¼ÆËã½»Ò×»á»°ÃÜÔ¿SDK£»
-*              Ìî³ä½»Ò×Êı¾İ£¬Ê¹ÓÃSDK¼ÆËãÆäMACÖµ£¬ÓëÊäÈëµÄARQC¶Ô±È²¢Éú³ÉARPC¡£
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: åˆ†æ•£MDKæºå¯†é’¥äº§ç”Ÿå¡ç‰‡ä¸»å¯†é’¥UDKï¼Œæ ¹æ®ATCå€¼è®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥SDKï¼›
+*              å¡«å……äº¤æ˜“æ•°æ®ï¼Œä½¿ç”¨SDKè®¡ç®—å…¶MACå€¼ï¼Œä¸è¾“å…¥çš„ARQCå¯¹æ¯”å¹¶ç”ŸæˆARPCã€‚
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -1226,7 +1358,7 @@ Tass_VerifyARQC_GenARPC(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ¸Ãº¯ÊıÄ£Ê½±êÖ¾Ó¦¸ÃÎª1 ***/
+    /*** è¯¥å‡½æ•°æ¨¡å¼æ ‡å¿—åº”è¯¥ä¸º1 ***/
     rv = HSM_IC_VerifyArqc_GenARPC(
             iKeyIdx,
             szKeyCipher,
@@ -1251,19 +1383,19 @@ Tass_VerifyARQC_GenARPC(
 
 /***************************************************************************
 * Subroutine: Tass_ScriptEncrypt
-* Function:   ½Å±¾¼ÓÃÜ
+* Function:   è„šæœ¬åŠ å¯†
 * Input:
-*    @iKeyIdx               ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk      ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıºÅÎª0Ê±ÓĞĞ§
-*    @pcPan                 ¿¨ºÅºÍ¿¨ĞòÁĞºÅ
-*    @pcATC                 Ó¦ÓÃ½»Ò×¼ÆÊıÆ÷£¬ÓÃÓÚ¼ÆËã½»Ò×»á»°ÃÜÔ¿
-*    @pcTransData           ½Å±¾Êı¾İ
+*    @iKeyIdx               å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk      å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å·ä¸º0æ—¶æœ‰æ•ˆ
+*    @pcPan                 å¡å·å’Œå¡åºåˆ—å·
+*    @pcATC                 åº”ç”¨äº¤æ˜“è®¡æ•°å™¨ï¼Œç”¨äºè®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥
+*    @pcTransData           è„šæœ¬æ•°æ®
 * Output:
-*    @pcDataCipher          ½Å±¾Êı¾İÃÜÎÄ
+*    @pcDataCipher          è„šæœ¬æ•°æ®å¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ·ÖÉ¢MDKÔ´ÃÜÔ¿²úÉú¿¨Æ¬Ö÷ÃÜÔ¿UDK£¬¸ù¾İATCÖµ¼ÆËã½»Ò×»á»°ÃÜÔ¿SDK£»
-*              ¶ÔÊäÈëÊı¾İ½øĞĞÌî³ä£¬Ê¹ÓÃSDK½øĞĞ¼ÓÃÜÔËËã,Êä³öÃÜÎÄÊı¾İ¡£
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: åˆ†æ•£MDKæºå¯†é’¥äº§ç”Ÿå¡ç‰‡ä¸»å¯†é’¥UDKï¼Œæ ¹æ®ATCå€¼è®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥SDKï¼›
+*              å¯¹è¾“å…¥æ•°æ®è¿›è¡Œå¡«å……ï¼Œä½¿ç”¨SDKè¿›è¡ŒåŠ å¯†è¿ç®—,è¾“å‡ºå¯†æ–‡æ•°æ®ã€‚
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -1338,7 +1470,7 @@ Tass_ScriptEncrypt(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ½Å±¾¼ÓÃÜ ***/
+    /*** è„šæœ¬åŠ å¯† ***/
     rv = HSM_IC_EncryptPbocScript(
             iKeyIdx,
             szKeyCipher,
@@ -1356,19 +1488,19 @@ Tass_ScriptEncrypt(
 
 /***************************************************************************
 * Subroutine: Tass_ScriptMAC
-* Function:   ½Å±¾MAC
+* Function:   è„šæœ¬MAC
 * Input:
-*    @iKeyIdx               ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk      ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıºÅÎª0Ê±ÓĞĞ§
-*    @pcPan                 ¿¨ºÅºÍ¿¨ĞòÁĞºÅ
-*    @pcATC                 Ó¦ÓÃ½»Ò×¼ÆÊıÆ÷£¬ÓÃÓÚ¼ÆËã½»Ò×»á»°ÃÜÔ¿
-*    @pcTransData           ½Å±¾Êı¾İ
+*    @iKeyIdx               å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk      å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å·ä¸º0æ—¶æœ‰æ•ˆ
+*    @pcPan                 å¡å·å’Œå¡åºåˆ—å·
+*    @pcATC                 åº”ç”¨äº¤æ˜“è®¡æ•°å™¨ï¼Œç”¨äºè®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥
+*    @pcTransData           è„šæœ¬æ•°æ®
 * Output:
-*    @pcMAC                 ½Å±¾Êı¾İMAC
+*    @pcMAC                 è„šæœ¬æ•°æ®MAC
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ·ÖÉ¢MDKÔ´ÃÜÔ¿²úÉú¿¨Æ¬Ö÷ÃÜÔ¿UDK£¬¸ù¾İATCÖµ¼ÆËã½»Ò×»á»°ÃÜÔ¿SDK£»
-*              ¶ÔÊäÈëÊı¾İ½øĞĞÌî³ä£¬Ê¹ÓÃSDK½øĞĞMACÔËËã£¬Êä³ö.
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: åˆ†æ•£MDKæºå¯†é’¥äº§ç”Ÿå¡ç‰‡ä¸»å¯†é’¥UDKï¼Œæ ¹æ®ATCå€¼è®¡ç®—äº¤æ˜“ä¼šè¯å¯†é’¥SDKï¼›
+*              å¯¹è¾“å…¥æ•°æ®è¿›è¡Œå¡«å……ï¼Œä½¿ç”¨SDKè¿›è¡ŒMACè¿ç®—ï¼Œè¾“å‡º.
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -1443,7 +1575,7 @@ Tass_ScriptMAC(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ¼ÆËã½Å±¾MAC ***/
+    /*** è®¡ç®—è„šæœ¬MAC ***/
     rv = HSM_IC_GeneratePbocScriptMac(
             iKeyIdx,
             szKeyCipher,
@@ -1461,23 +1593,23 @@ Tass_ScriptMAC(
 
 /***************************************************************************
 * Subroutine: Tass_EncryptICData
-* Function:   ICÊı¾İ¼ÓÃÜ
+* Function:   ICæ•°æ®åŠ å¯†
 * Input:
-*   @iKeyIdx                 ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk        ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıºÅÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   @iEncMode                ¼ÓÃÜËã·¨Ä£Ê½
-*   @iDeriveNum              ÃÜÔ¿·ÖÉ¢¼¶Êı
-*   @pcDeriveData            ÃÜÔ¿·ÖÉ¢Òò×Ó
-*   @iSessionKeyMode         »á»°ÃÜÔ¿Ä£Ê½
-*   @pcSessionKeyData        »á»°ÃÜÔ¿Òò×Ó
-*   @iPaddingMode            Êı¾İÌî³äÄ£Ê½
-*   @pcInData                ÊäÈëÊı¾İ
-*   @pcIv                    IVÏòÁ¿
+*   @iKeyIdx                 å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk        å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å·ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   @iEncMode                åŠ å¯†ç®—æ³•æ¨¡å¼
+*   @iDeriveNum              å¯†é’¥åˆ†æ•£çº§æ•°
+*   @pcDeriveData            å¯†é’¥åˆ†æ•£å› å­
+*   @iSessionKeyMode         ä¼šè¯å¯†é’¥æ¨¡å¼
+*   @pcSessionKeyData        ä¼šè¯å¯†é’¥å› å­
+*   @iPaddingMode            æ•°æ®å¡«å……æ¨¡å¼
+*   @pcInData                è¾“å…¥æ•°æ®
+*   @pcIv                    IVå‘é‡
 * Output:
-*   @pcOutData               Êı¾İÃÜÎÄ
+*   @pcOutData               æ•°æ®å¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ÓÉÓ¦ÓÃÏµÍ³È·¶¨ÃÜÔ¿·ÖÉ¢µÄÄ£Ê½£¬²úÉú¹ı³ÌÃÜÔ¿£¬¶ÔÖ¸¶¨µÄÊı¾İ½øĞĞ¼ÓÃÜ
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: ç”±åº”ç”¨ç³»ç»Ÿç¡®å®šå¯†é’¥åˆ†æ•£çš„æ¨¡å¼ï¼Œäº§ç”Ÿè¿‡ç¨‹å¯†é’¥ï¼Œå¯¹æŒ‡å®šçš„æ•°æ®è¿›è¡ŒåŠ å¯†
 *
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -1597,19 +1729,19 @@ Tass_EncryptICData(
 
     rv = HSM_IC_SymmKeyEncryptData(
             hSessionHandle, 
-            iEncMode,               /*** ¼ÓÃÜËã·¨Ä£Ê½ ***/
-            "109",                  /*** ÃÜÔ¿ÀàĞÍ ***/
-            iKeyIdx,                /*** ÃÜÔ¿Ë÷Òı ***/
-            szKeyCipher,            /*** ÃÜÔ¿ÃÜÎÄ ***/
-            pcDeriveData,           /*** ÃÜÔ¿·ÖÉ¢Òò×Ó ***/
-            iSessionKeyMode,        /*** »á»°ÃÜÔ¿²úÉúÄ£Ê½ ***/
-            pcSessionKeyData,       /*** »á»°ÃÜÔ¿Òò×Ó ***/
-            iPaddingMode,           /*** Êı¾İÌî³äÄ£Ê½ ***/
-            pcIv,                   /*** ³õÊ¼»¯ÏòÁ¿ ***/
-            aucInData,              /*** ´ı¼ÓÃÜµÄÊı¾İ ***/
-            iInDataLen,             /*** ´ı¼ÓÃÜµÄÊı¾İ³¤¶È ***/
-            aucOutData,             /*** Êä³öµÄÃÜÔ¿ÃÜÎÄ ***/
-            &iOutDataLen);          /*** Êä³öµÄÃÜÔ¿ÃÜÎÄ×Ö½ÚÊı ***/
+            iEncMode,               /*** åŠ å¯†ç®—æ³•æ¨¡å¼ ***/
+            "109",                  /*** å¯†é’¥ç±»å‹ ***/
+            iKeyIdx,                /*** å¯†é’¥ç´¢å¼• ***/
+            szKeyCipher,            /*** å¯†é’¥å¯†æ–‡ ***/
+            pcDeriveData,           /*** å¯†é’¥åˆ†æ•£å› å­ ***/
+            iSessionKeyMode,        /*** ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼ ***/
+            pcSessionKeyData,       /*** ä¼šè¯å¯†é’¥å› å­ ***/
+            iPaddingMode,           /*** æ•°æ®å¡«å……æ¨¡å¼ ***/
+            pcIv,                   /*** åˆå§‹åŒ–å‘é‡ ***/
+            aucInData,              /*** å¾…åŠ å¯†çš„æ•°æ® ***/
+            iInDataLen,             /*** å¾…åŠ å¯†çš„æ•°æ®é•¿åº¦ ***/
+            aucOutData,             /*** è¾“å‡ºçš„å¯†é’¥å¯†æ–‡ ***/
+            &iOutDataLen);          /*** è¾“å‡ºçš„å¯†é’¥å¯†æ–‡å­—èŠ‚æ•° ***/
     if(rv)
     {
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
@@ -1628,26 +1760,26 @@ Tass_EncryptICData(
 
 /***************************************************************************
 * Subroutine: Tass_GenerateICMac
-* Function:   Í¨ÓÃMAC/TAC¼ÆËã
+* Function:   é€šç”¨MAC/TACè®¡ç®—
 * Input:
-*   @iKeyIdx                ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk       ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   @iMode                  Ëã·¨±êÊ¶
-*   @iMacType               MACÈ¡Öµ·½Ê½
-*   @iDeriveNum             ÃÜÔ¿·ÖÉ¢¼¶Êı
-*   @pcDeriveData           ÃÜÔ¿·ÖÉ¢Òò×Ó
-*   @iSessionKeyMode        »á»°ÃÜÔ¿Ä£Ê½
-*   @pcSessionKeyData       »á»°ÃÜÔ¿Òò×Ó
-*   @iPaddingMode           Êı¾İÌî³äÄ£Ê½
-*   @pcInData               ÊäÈëÊı¾İ
-*   @iInDataLen             ÊäÈëÊı¾İ³¤¶È
-*   @pcIv                   IVÏòÁ¿
+*   @iKeyIdx                å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk       å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   @iMode                  ç®—æ³•æ ‡è¯†
+*   @iMacType               MACå–å€¼æ–¹å¼
+*   @iDeriveNum             å¯†é’¥åˆ†æ•£çº§æ•°
+*   @pcDeriveData           å¯†é’¥åˆ†æ•£å› å­
+*   @iSessionKeyMode        ä¼šè¯å¯†é’¥æ¨¡å¼
+*   @pcSessionKeyData       ä¼šè¯å¯†é’¥å› å­
+*   @iPaddingMode           æ•°æ®å¡«å……æ¨¡å¼
+*   @pcInData               è¾“å…¥æ•°æ®
+*   @iInDataLen             è¾“å…¥æ•°æ®é•¿åº¦
+*   @pcIv                   IVå‘é‡
 * Output:
-*   @pcMac                  Êı¾İMAC
+*   @pcMac                  æ•°æ®MAC
 *
-* Return:      ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: Ê¹ÓÃIC¿¨½»Ò×ÃÜÔ¿·ÖÉ¢ºóµÄÑéÖ¤IC²úÉúµÄ¹ı³ÌÃÜÔ¿£¬¼ÆËã½»Ò×Êı¾İµÄMAC»òTAC£¬ÓÃÓÚ½»Ò×ÏµÍ³ºÍ·¢¿¨¹ı³Ì¡£
-*              ¿É×Ô¶¨ÒåMACËã·¨Ä£Ê½¡¢È¡ÖµÄ£Ê½£¬Ö§³Ö¶àÖÖÃÜÔ¿ÀàĞÍ£¬×Ô¶¨ÒåÊı¾İPADDING¹æÔò¡¢¼ÆËãMACµÄIVÊı¾İµÈ¡£
+* Return:      æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: ä½¿ç”¨ICå¡äº¤æ˜“å¯†é’¥åˆ†æ•£åçš„éªŒè¯ICäº§ç”Ÿçš„è¿‡ç¨‹å¯†é’¥ï¼Œè®¡ç®—äº¤æ˜“æ•°æ®çš„MACæˆ–TACï¼Œç”¨äºäº¤æ˜“ç³»ç»Ÿå’Œå‘å¡è¿‡ç¨‹ã€‚
+*              å¯è‡ªå®šä¹‰MACç®—æ³•æ¨¡å¼ã€å–å€¼æ¨¡å¼ï¼Œæ”¯æŒå¤šç§å¯†é’¥ç±»å‹ï¼Œè‡ªå®šä¹‰æ•°æ®PADDINGè§„åˆ™ã€è®¡ç®—MACçš„IVæ•°æ®ç­‰ã€‚
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -1756,21 +1888,21 @@ Tass_GenerateICMac(
         return HAR_HEX_TO_BYTE;
     }
 
-    /*** ¸Ãº¯ÊıµÄMACÈ¡Öµ·½Ê½¹Ì¶¨Îª8£»***/
+    /*** è¯¥å‡½æ•°çš„MACå–å€¼æ–¹å¼å›ºå®šä¸º8ï¼›***/
     rv = HSM_IC_GeneralGenerateMac(
-            iMode,                          /*** MACËã·¨Ä£Ê½ ***/
-            iMacType,                       /*** MACÈ¡Öµ·½Ê½ ***/
-            "008",                          /*** ÃÜÔ¿ÀàĞÍ ***/
-            iKeyIdx,                        /*** ÃÜÔ¿Ë÷Òı ***/
-            szKeyCipher,                    /*** ÃÜÔ¿ÃÜÎÄ ***/
-            pcDeriveData,                   /*** ·ÖÉ¢Òò×Ó ***/
-            iSessionKeyMode,                /*** »á»°ÃÜÔ¿²úÉúÄ£Ê½ ***/
-            pcSessionKeyData,               /*** »á»°ÃÜÔ¿Òò×Ó ***/
-            iPaddingMode,                   /*** Êı¾İÌî³äÄ£Ê½ ***/
-            aucInData,                      /*** ´ı¼ÆËãMACµÄÊı¾İ ***/
-            iInDataLen,                     /*** ´ı¼ÆËãMACµÄÊı¾İ³¤¶È ***/
-            pcIv,                           /*** ³õÊ¼»¯ÏòÁ¿ ***/
-            pcMac,                          /*** Êä³öµÄMAC ***/
+            iMode,                          /*** MACç®—æ³•æ¨¡å¼ ***/
+            iMacType,                       /*** MACå–å€¼æ–¹å¼ ***/
+            "008",                          /*** å¯†é’¥ç±»å‹ ***/
+            iKeyIdx,                        /*** å¯†é’¥ç´¢å¼• ***/
+            szKeyCipher,                    /*** å¯†é’¥å¯†æ–‡ ***/
+            pcDeriveData,                   /*** åˆ†æ•£å› å­ ***/
+            iSessionKeyMode,                /*** ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼ ***/
+            pcSessionKeyData,               /*** ä¼šè¯å¯†é’¥å› å­ ***/
+            iPaddingMode,                   /*** æ•°æ®å¡«å……æ¨¡å¼ ***/
+            aucInData,                      /*** å¾…è®¡ç®—MACçš„æ•°æ® ***/
+            iInDataLen,                     /*** å¾…è®¡ç®—MACçš„æ•°æ®é•¿åº¦ ***/
+            pcIv,                           /*** åˆå§‹åŒ–å‘é‡ ***/
+            pcMac,                          /*** è¾“å‡ºçš„MAC ***/
             szMacCiher);
     if(rv)
     {
@@ -1782,20 +1914,20 @@ Tass_GenerateICMac(
 
 /***************************************************************************
 * Subroutine: Tass_GenVerifyCvn
-* Function:   ²úÉú»òĞ£ÑéCVN
+* Function:   äº§ç”Ÿæˆ–æ ¡éªŒCVN
 * Input:
-*   @iKeyIdx            ÃÜÔ¿Ë÷Òı£¬µ±ÃÜÔ¿Ë÷ÒıÎª0,Ê±£¬²ÉÓÃÃÜÎÄ·½Ê½
-*   @pcKeyCipherByLmk   LMKÏÂ»úÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @iMode              Éú³ÉĞ£Ñé±êÊ¶: 0-Éú³É, 1-Ğ£Ñé
-*   @pcPan              ÕÊºÅ
-*   @pcValidity         ÓĞĞ§ÆÚ
-*   @pcServiceCode      ·şÎñ´úÂë
-*   @pcCvn              CVN£¬½öµ±iMode = 1Ê±¸Ã²ÎÊıÓĞĞ§
+*   @iKeyIdx            å¯†é’¥ç´¢å¼•ï¼Œå½“å¯†é’¥ç´¢å¼•ä¸º0,æ—¶ï¼Œé‡‡ç”¨å¯†æ–‡æ–¹å¼
+*   @pcKeyCipherByLmk   LMKä¸‹æœºå¯†çš„å¯†é’¥å¯†æ–‡
+*   @iMode              ç”Ÿæˆæ ¡éªŒæ ‡è¯†: 0-ç”Ÿæˆ, 1-æ ¡éªŒ
+*   @pcPan              å¸å·
+*   @pcValidity         æœ‰æ•ˆæœŸ
+*   @pcServiceCode      æœåŠ¡ä»£ç 
+*   @pcCvn              CVNï¼Œä»…å½“iMode = 1æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
 * Output:
-*   @pcCvn              CVN£¬½öµ±iMode = 0Ê±¸Ã²ÎÊıÓĞĞ§
+*   @pcCvn              CVNï¼Œä»…å½“iMode = 0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ¸ù¾İÊäÈëCVNÊı¾İºÍCVK²úÉúCVN»òĞ£ÑéCVN
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: æ ¹æ®è¾“å…¥CVNæ•°æ®å’ŒCVKäº§ç”ŸCVNæˆ–æ ¡éªŒCVN
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -1875,7 +2007,7 @@ Tass_GenVerifyCvn(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ²úÉúCVV,call CW  ***/
+    /*** äº§ç”ŸCVV,call CW  ***/
     if(iMode == 0)
     {
         rv = HSM_RCL_GenerateCVV(iKeyIdx, pcKeyCipherByLmk, pcPan, pcValidity, pcServiceCode, pcCvn);
@@ -1884,7 +2016,7 @@ Tass_GenVerifyCvn(
             LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
         }
 
-    }/*** Ğ£ÑéÊ±ºòÎª´«Èë²ÎÊı,Ğ£ÑéCVV,call CY ***/
+    }/*** æ ¡éªŒæ—¶å€™ä¸ºä¼ å…¥å‚æ•°,æ ¡éªŒCVV,call CY ***/
     else
     {
         if(strlen(pcCvn) != 3)
@@ -1905,18 +2037,18 @@ Tass_GenVerifyCvn(
 
 /***************************************************************************
 * Subroutine: Tass_Gen_ANSI_Mac
-* Function:   ²úÉúANSIX9.19MAC
+* Function:   äº§ç”ŸANSIX9.19MAC
 * Input:
-*   @hSessionHandle     »á»°¾ä±ú
-*   @iKeyIdx            ÃÜÔ¿Ë÷Òı
-*   pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   iInDataLen          ¼ÆËãMACÖµµÄÊı¾İ³¤¶È
-*   pcInData            ¼ÆËãMACÖµµÄÊı¾İ
+*   @hSessionHandle     ä¼šè¯å¥æŸ„
+*   @iKeyIdx            å¯†é’¥ç´¢å¼•
+*   pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   iInDataLen          è®¡ç®—MACå€¼çš„æ•°æ®é•¿åº¦
+*   pcInData            è®¡ç®—MACå€¼çš„æ•°æ®
 * Output:
-*   @pcMac              MACÖµ
+*   @pcMac              MACå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description: ¸ù¾İÊäÈëµÄMACÊı¾İ²ÉÓÃ±ê×¼µÄANSIX9.19Ëã·¨²úÉúMAC
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description: æ ¹æ®è¾“å…¥çš„MACæ•°æ®é‡‡ç”¨æ ‡å‡†çš„ANSIX9.19ç®—æ³•äº§ç”ŸMAC
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -1931,8 +2063,8 @@ Tass_Gen_ANSI_Mac(
         char    *pcMac/*out*/)
 {
     int     rv = HAR_OK;
-    unsigned char aucData[1024 * 2] = {0};
-    char    szKeyCipher[49 + 1] = {0};
+    char szKeyCipher[512] = {0};
+    char aucData[512] = {0};
 
     rv = Tools_CheckKeyValidity(iKeyIdx, pcKeyCipherByLmk, szKeyCipher);
     if(rv)
@@ -1975,16 +2107,16 @@ Tass_Gen_ANSI_Mac(
 
     rv = HSM_IC_GenerateMac(
             hSessionHandle,
-            3,
-            "008",
-            iKeyIdx,
-            szKeyCipher,
-            "",
-            0,                          /*** »á»°Ä£Ê½ ***/
-            "",                         /*** »á»°Òò×Ó ***/
-            2,
-            aucData,                    /*** ÊäÈëµÄÊı¾İ ***/
-            iInDataLen,                 /*** ÊäÈëµÄÊı¾İ³¤¶È ***/
+            3,                          /**ç®—æ³•æ¨¡å¼**/
+            "008",                      /**å¯†é’¥ç±»å‹**/
+            iKeyIdx,                    /**è®¡ç®—macçš„å¯†é’¥**/
+            pcKeyCipherByLmk,           /***è®¡ç®—macçš„å¯†é’¥**/
+            "",                         /**å¯†é’¥åˆ†æ•£å› å­**/
+            0,                          /*** ä¼šè¯æ¨¡å¼ ***/
+            "",                         /*** ä¼šè¯å› å­ ***/
+            2,                          /****å¡«å……æ¨¡å¼***/
+            aucData,                   /*** è¾“å…¥çš„æ•°æ® ***/
+            iInDataLen,                 /*** è¾“å…¥çš„æ•°æ®é•¿åº¦ ***/
             "0000000000000000",
             pcMac);
     if(rv)
@@ -1997,17 +2129,17 @@ Tass_Gen_ANSI_Mac(
 
 /***************************************************************************
 * Subroutine: Tass_GenUnionMac
-* Function:   ¼ÆËãÒøÁªMAC£¨ÔÚÏß·Ö·¢ZAK/TAKÊ±ÑéÖ¤ÃÜÔ¿µÄÓĞĞ§ĞÔ£©
+* Function:   è®¡ç®—é“¶è”MACï¼ˆåœ¨çº¿åˆ†å‘ZAK/TAKæ—¶éªŒè¯å¯†é’¥çš„æœ‰æ•ˆæ€§ï¼‰
 * Input:
-*   @iKeyIdx            ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk   ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @iInDataLen         ´ı¼ÆËãMACµÄÊı¾İ³¤¶È
-*   @pcInData           ´ı¼ÆËãMACµÄÊı¾İ
+*   @iKeyIdx            å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk   å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @iInDataLen         å¾…è®¡ç®—MACçš„æ•°æ®é•¿åº¦
+*   @pcInData           å¾…è®¡ç®—MACçš„æ•°æ®
 * Output:
-*   @pcMac              MACÖµ
+*   @pcMac              MACå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  ¸ù¾İÊäÈëµÄMACÊı¾İºÍMAK²ÉÓÃÒøÁªËã·¨²úÉúMAC
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æ ¹æ®è¾“å…¥çš„MACæ•°æ®å’ŒMAKé‡‡ç”¨é“¶è”ç®—æ³•äº§ç”ŸMAC
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -2060,7 +2192,7 @@ Tass_GenUnionMac(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ¸Ãº¯ÊıµÄMACÈ¡Öµ·½Ê½¹Ì¶¨Îª8 ***/
+    /*** è¯¥å‡½æ•°çš„MACå–å€¼æ–¹å¼å›ºå®šä¸º8 ***/
     rv =  HSM_IC_GenerateMac(
                 hSessionHandle,
                 1,
@@ -2068,11 +2200,11 @@ Tass_GenUnionMac(
                 iKeyIdx,
                 szKeyCipher,
                 "",
-                0,                       /*** »á»°Ä£Ê½ ***/
-                "",                      /*** »á»°Òò×Ó ***/
+                0,                       /*** ä¼šè¯æ¨¡å¼ ***/
+                "",                      /*** ä¼šè¯å› å­ ***/
                 2,
-                aucInData,               /*** ÊäÈëµÄÊı¾İ ***/
-                iDataLen,                /*** ÊäÈëµÄÊı¾İ³¤¶È ***/
+                aucInData,               /*** è¾“å…¥çš„æ•°æ® ***/
+                iDataLen,                /*** è¾“å…¥çš„æ•°æ®é•¿åº¦ ***/
                 "0000000000000000",
                 pcMac);
 
@@ -2086,17 +2218,17 @@ Tass_GenUnionMac(
 
 /***************************************************************************
 * Subroutine: Tass_GenZPKMac
-* Function:   ¼ÆËãÒøÁªZPK-MAC£¨ÔÚÏß·Ö·¢ZPKÊ±ÑéÖ¤ÃÜÔ¿µÄÓĞĞ§ĞÔ£©
+* Function:   è®¡ç®—é“¶è”ZPK-MACï¼ˆåœ¨çº¿åˆ†å‘ZPKæ—¶éªŒè¯å¯†é’¥çš„æœ‰æ•ˆæ€§ï¼‰
 * Input:
-*   @iKeyIdx            ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk   ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @iInDataLen         ´ı¼ÆËãMACµÄÊı¾İ³¤¶È
-*   @pcInData           ´ı¼ÆËãMACµÄÊı¾İ
+*   @iKeyIdx            å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk   å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @iInDataLen         å¾…è®¡ç®—MACçš„æ•°æ®é•¿åº¦
+*   @pcInData           å¾…è®¡ç®—MACçš„æ•°æ®
 * Output:
-*   @pcMac              MACÖµ
+*   @pcMac              MACå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  ¸ù¾İÊäÈëµÄMACÊı¾İ²ÉÓÃÒøÁªpos-macËã·¨²úÉúMAC
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æ ¹æ®è¾“å…¥çš„MACæ•°æ®é‡‡ç”¨é“¶è”pos-macç®—æ³•äº§ç”ŸMAC
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -2153,7 +2285,7 @@ Tass_GenZPKMac(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** ¸Ãº¯ÊıµÄMACÈ¡Öµ·½Ê½¹Ì¶¨Îª8 ***/
+    /*** è¯¥å‡½æ•°çš„MACå–å€¼æ–¹å¼å›ºå®šä¸º8 ***/
     rv = HSM_RCL_ZpkGenCbcMac(
                 0,
                 iKeyIdx,
@@ -2174,22 +2306,22 @@ Tass_GenZPKMac(
 
 /***************************************************************************
 * Subroutine: Tass_TranslatePin
-* Function:   PINÃÜÎÄ×ª¼ÓÃÜ
+* Function:   PINå¯†æ–‡è½¬åŠ å¯†
 * Input:
-*   @iSrcKeyIdx         Ô´ÃÜÔ¿Ë÷Òı
-*   pcSrcpcKeyCipherByLmk        Ô´ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ô´ÃÜÔ¿Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   iDstKeyIdx          Ä¿µÄÃÜÔ¿Ë÷Òı
-*   pcDstpcKeyCipherByLmk        Ä¿µÄÃÜÔ¿ÃÜÎÄ£¬½öµ±Ä¿µÄÃÜÔ¿Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   pcSrcPan            Ô´ÕËºÅ
-*   pcDstPan            Ä¿µÄÕËºÅ
-*   iSrcPinBlkFmt       Ô´PINBLOCK¸ñÊ½
-*   iDstPinBlkFmt       Ä¿±êPINBLOCK¸ñÊ½
-*   pcSrcPinBlkCipher   Ô´PINBLOCKÃÜÎÄ
+*   @iSrcKeyIdx         æºå¯†é’¥ç´¢å¼•
+*   pcSrcpcKeyCipherByLmk        æºå¯†é’¥å¯†æ–‡ï¼Œä»…å½“æºå¯†é’¥ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   iDstKeyIdx          ç›®çš„å¯†é’¥ç´¢å¼•
+*   pcDstpcKeyCipherByLmk        ç›®çš„å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç›®çš„å¯†é’¥ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   pcSrcPan            æºè´¦å·
+*   pcDstPan            ç›®çš„è´¦å·
+*   iSrcPinBlkFmt       æºPINBLOCKæ ¼å¼
+*   iDstPinBlkFmt       ç›®æ ‡PINBLOCKæ ¼å¼
+*   pcSrcPinBlkCipher   æºPINBLOCKå¯†æ–‡
 * Output:
-*   @pcDstPinBlkCipher   Ä¿±êPINBLOCKÃÜÎÄ
+*   @pcDstPinBlkCipher   ç›®æ ‡PINBLOCKå¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  ¸ù¾İÊäÈëµÄÕËºÅ¡¢PIKµÈÒªËØ£¬°ÑPIN´ÓÖ¸¶¨Ò»¸ö»ú¹¹µÄPIK¼ÓÃÜ×ª»»ÎªÁíÍâÒ»¸ö»ú¹¹µÄPIK¼ÓÃÜ¡£
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æ ¹æ®è¾“å…¥çš„è´¦å·ã€PIKç­‰è¦ç´ ï¼ŒæŠŠPINä»æŒ‡å®šä¸€ä¸ªæœºæ„çš„PIKåŠ å¯†è½¬æ¢ä¸ºå¦å¤–ä¸€ä¸ªæœºæ„çš„PIKåŠ å¯†ã€‚
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -2268,18 +2400,18 @@ Tass_TranslatePin(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** µ÷ÓÃ×ª¼ÓÃÜÖ¸Áîº¯Êı ***/
+    /*** è°ƒç”¨è½¬åŠ å¯†æŒ‡ä»¤å‡½æ•° ***/
     rv = HSM_RCL_TransferCipherPin_Zpk2Zpk(
-            iSrcKeyIdx,                 /*** Ô´ÃÜÔ¿Ë÷Òı ***/
-            pcSrcpcKeyCipherByLmk,      /*** Ô´ÃÜÔ¿ÃÜÎÄ ***/
-            iDstKeyIdx,                 /*** Ä¿µÄÃÜÔ¿Ë÷Òı ***/
-            pcDstpcKeyCipherByLmk,      /*** Ä¿µÄÃÜÔ¿ÃÜÎÄ ***/
-            iSrcPinBlkFmt,              /*** Ô´PINBLOCK¸ñÊ½ ***/
-            iDstPinBlkFmt,              /*** Ä¿±êPINBLOCK¸ñÊ½ ***/
-            pcSrcPan,                   /*** Ô´ÕËºÅ ***/
-            pcDstPan,                   /*** Ä¿µÄÕËºÅ ***/
-            pcSrcPinBlkCipher,          /*** Ô´PINBLOCKÃÜÎÄ ***/
-            pcDstPinBlkCipher);         /*** Ä¿±êPINBLOCKÃÜÎÄ ***/
+            iSrcKeyIdx,                 /*** æºå¯†é’¥ç´¢å¼• ***/
+            pcSrcpcKeyCipherByLmk,      /*** æºå¯†é’¥å¯†æ–‡ ***/
+            iDstKeyIdx,                 /*** ç›®çš„å¯†é’¥ç´¢å¼• ***/
+            pcDstpcKeyCipherByLmk,      /*** ç›®çš„å¯†é’¥å¯†æ–‡ ***/
+            iSrcPinBlkFmt,              /*** æºPINBLOCKæ ¼å¼ ***/
+            iDstPinBlkFmt,              /*** ç›®æ ‡PINBLOCKæ ¼å¼ ***/
+            pcSrcPan,                   /*** æºè´¦å· ***/
+            pcDstPan,                   /*** ç›®çš„è´¦å· ***/
+            pcSrcPinBlkCipher,          /*** æºPINBLOCKå¯†æ–‡ ***/
+            pcDstPinBlkCipher);         /*** ç›®æ ‡PINBLOCKå¯†æ–‡ ***/
     if(rv)
     {
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
@@ -2290,18 +2422,18 @@ Tass_TranslatePin(
 
 /***************************************************************************
 * Subroutine: Tass_EncryptPIN
-* Function:   ¼ÓÃÜPINÃ÷ÎÄ
+* Function:   åŠ å¯†PINæ˜æ–‡
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
 *   @pcPinText           PIN
-*   @iPinBlkFmt          PIN¿é¸ñÊ½
-*   @pcPan               ÕËºÅ
+*   @iPinBlkFmt          PINå—æ ¼å¼
+*   @pcPan               è´¦å·
 * Output:
-*   @pcPinBlkCipher   PIN¿éÃÜÎÄ
+*   @pcPinBlkCipher   PINå—å¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  °Ñ°´ANSIX9.8¸ñÊ½×éÖ¯µÄPINµÄÃ÷ÎÄÓÃÖ¸¶¨µÄPIK½øĞĞ¼ÓÃÜ
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æŠŠæŒ‰ANSIX9.8æ ¼å¼ç»„ç»‡çš„PINçš„æ˜æ–‡ç”¨æŒ‡å®šçš„PIKè¿›è¡ŒåŠ å¯†
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -2359,7 +2491,7 @@ Tass_EncryptPIN(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** call BA LMK¼ÓÃÜÒ»¸öÃ÷ÎÄPINÂë ***/
+    /*** call BA LMKåŠ å¯†ä¸€ä¸ªæ˜æ–‡PINç  ***/
     rv = HSM_RCL_EncryptPin_LMK(szPinText, pcPan, szLmkPin);
     if(rv)
     {
@@ -2367,7 +2499,7 @@ Tass_EncryptPIN(
         return rv;
     }
 
-    /*** call JG ½«PINÓÉLMK¼ÓÃÜ×ª»»ÎªZPK¼ÓÃÜ ***/
+    /*** call JG å°†PINç”±LMKåŠ å¯†è½¬æ¢ä¸ºZPKåŠ å¯† ***/
     rv = HSM_RCL_TransferCipherPin_Lmk2Zpk(hSessionHandle, iKeyIdx, pcKeyCipherByLmk, iPinBlkFmt, pcPan, szLmkPin, pcPinBlkCipher);
     if(rv)
     {
@@ -2379,19 +2511,19 @@ Tass_EncryptPIN(
 
 /***************************************************************************
 * Subroutine: Tass_Generate_Zmk
-* Function:   Ëæ»úÉú³ÉZMK
+* Function:   éšæœºç”ŸæˆZMK
 * Input:
-*   @hSessionHandle      »á»°¾ä±ú
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cZmkScheme          ZMKËã·¨±êÊ¶
+*   @hSessionHandle      ä¼šè¯å¥æŸ„
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cZmkScheme          ZMKç®—æ³•æ ‡è¯†
 * Output:
-*   @pcZmkCipherByZmk    ZMK¼ÓÃÜµÄZMKÃÜÔ¿ÃÜÎÄ
-*   @pcZmkCipherByLmk    LMK¼ÓÃÜµÄZMKÃÜÔ¿ÃÜÎÄ
-*   @pcZmkCv             ZMKĞ£ÑéÖµ
+*   @pcZmkCipherByZmk    ZMKåŠ å¯†çš„ZMKå¯†é’¥å¯†æ–‡
+*   @pcZmkCipherByLmk    LMKåŠ å¯†çš„ZMKå¯†é’¥å¯†æ–‡
+*   @pcZmkCv             ZMKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  °Ñ°´ANSIX9.8¸ñÊ½×éÖ¯µÄPINµÄÃ÷ÎÄÓÃÖ¸¶¨µÄPIK½øĞĞ¼ÓÃÜ
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æŠŠæŒ‰ANSIX9.8æ ¼å¼ç»„ç»‡çš„PINçš„æ˜æ–‡ç”¨æŒ‡å®šçš„PIKè¿›è¡ŒåŠ å¯†
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -2417,7 +2549,7 @@ Tass_Generate_Zmk(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cZmkScheme);
     if(rv)
     {
@@ -2467,18 +2599,18 @@ Tass_Generate_Zmk(
 
 /***************************************************************************
 * Subroutine: Tass_Generate_Pik
-* Function:   Ëæ»úÉú³ÉPIK
+* Function:   éšæœºç”ŸæˆPIK
 * Input:
-*   @hSessionHandle      »á»°¾ä±ú
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cPikScheme          PIKËã·¨±êÊ¶
+*   @hSessionHandle      ä¼šè¯å¥æŸ„
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cPikScheme          PIKç®—æ³•æ ‡è¯†
 * Output:
-*   @pcPikCipherByZmk    ZMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
-*   @pcPikCipherByLmk    LMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
-*   @pcPikCv             PIKĞ£ÑéÖµ
+*   @pcPikCipherByZmk    ZMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
+*   @pcPikCipherByLmk    LMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
+*   @pcPikCv             PIKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -2506,7 +2638,7 @@ Tass_Generate_Pik(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cPikScheme);
     if(rv)
     {
@@ -2555,26 +2687,26 @@ Tass_Generate_Pik(
 }
 
 /***************************************************************************
-* Subroutine: Tass_GenerateMak
-* Function:   Ëæ»úÉú³ÉMAK
+* Subroutine: Tass_Generate_Mak
+* Function:   éšæœºç”ŸæˆMAK
 * Input:
-*   @hSessionHandle      »á»°¾ä±ú
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cMakScheme          MAKËã·¨±êÊ¶
+*   @hSessionHandle      ä¼šè¯å¥æŸ„
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cMakScheme          MAKç®—æ³•æ ‡è¯†
 * Output:
-*   @pcMakCipherByZmk    ZMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
-*   @pcMakCipherByLmk    LMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
-*   @pcMakCv             MAKĞ£ÑéÖµ
+*   @pcMakCipherByZmk    ZMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
+*   @pcMakCipherByLmk    LMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
+*   @pcMakCv             MAKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateMak(
+Tass_Generate_Mak(
         void *hSessionHandle,
         int     iKeyIdx,
         char    *pcKeyCipherByLmk,
@@ -2594,7 +2726,7 @@ Tass_GenerateMak(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cMakScheme);
     if(rv)
     {
@@ -2644,17 +2776,17 @@ Tass_GenerateMak(
 
 /***************************************************************************
 * Subroutine: Tass_Generate_Zek
-* Function:   Ëæ»úÉú³ÉZEK
+* Function:   éšæœºç”ŸæˆZEK
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cZekScheme          ZEKËã·¨±êÊ¶
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cZekScheme          ZEKç®—æ³•æ ‡è¯†
 * Output:
-*   @pcZekCipherByZmk    ZMK¼ÓÃÜµÄZEKÃÜÔ¿ÃÜÎÄ
-*   @pcZekCipherByLmk    LMK¼ÓÃÜµÄZEKÃÜÔ¿ÃÜÎÄ
-*   @pcZekCv             ZEKĞ£ÑéÖµ
+*   @pcZekCipherByZmk    ZMKåŠ å¯†çš„ZEKå¯†é’¥å¯†æ–‡
+*   @pcZekCipherByLmk    LMKåŠ å¯†çš„ZEKå¯†é’¥å¯†æ–‡
+*   @pcZekCv             ZEKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -2681,7 +2813,7 @@ Tass_Generate_Zek(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cZekScheme);
     if(rv)
     {
@@ -2732,17 +2864,17 @@ Tass_Generate_Zek(
 
 /***************************************************************************
 * Subroutine: Tass_ImportPik
-* Function:   µ¼ÈëPIK
+* Function:   å¯¼å…¥PIK
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cPikScheme          PIKËã·¨±êÊ¶
-*   @pcPikCipherByZmk    ZMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cPikScheme          PIKç®—æ³•æ ‡è¯†
+*   @pcPikCipherByZmk    ZMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
 * Output:
-*   @pcPikCipherByLmk    LMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
-*   @pcPikCv             PIKĞ£ÑéÖµ
+*   @pcPikCipherByLmk    LMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
+*   @pcPikCv             PIKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -2770,7 +2902,7 @@ Tass_ImportPik(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cPikScheme);
     if(rv)
     {
@@ -2827,17 +2959,17 @@ Tass_ImportPik(
 
 /***************************************************************************
 * Subroutine: Tass_ImportMak
-* Function:   µ¼ÈëMAK
+* Function:   å¯¼å…¥MAK
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @cMakScheme          MAKËã·¨±êÊ¶
-*   @pcMakCipherByZmk    ZMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @cMakScheme          MAKç®—æ³•æ ‡è¯†
+*   @pcMakCipherByZmk    ZMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
 * Output:
-*   @pcMakCipherByLmk    LMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
-*   @pcMakCv             MAKĞ£ÑéÖµ
+*   @pcMakCipherByLmk    LMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
+*   @pcMakCv             MAKæ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -2865,7 +2997,7 @@ Tass_ImportMak(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cMakScheme);
     if(rv)
     {
@@ -2922,21 +3054,21 @@ Tass_ImportMak(
 
 /***************************************************************************
 * Subroutine: Tass_EncryptData
-* Function:   Í¨ÓÃÊı¾İ¼ÓÃÜ
+* Function:   é€šç”¨æ•°æ®åŠ å¯†
 * Input:
-*    @iKeyIdx                    ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk           ÃÜÔ¿ÃÜÎÄ
-*    @iEncMode                   Ëã·¨Ä£Ê½
-*    @iSessionKeyMode            »á»°ÃÜÔ¿²úÉúÄ£Ê½
-*    @pcSessionKeyData           »á»°ÃÜÔ¿Òò×Ó
-*    @iPaddingMode               Êı¾İÌî³äÄ£Ê½
-*    @pcInData                   ÊäÈëµÄÊı¾İ
-*    @pcIv                       ³õÊ¼»¯ÏòÁ¿
+*    @iKeyIdx                    å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk           å¯†é’¥å¯†æ–‡
+*    @iEncMode                   ç®—æ³•æ¨¡å¼
+*    @iSessionKeyMode            ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼
+*    @pcSessionKeyData           ä¼šè¯å¯†é’¥å› å­
+*    @iPaddingMode               æ•°æ®å¡«å……æ¨¡å¼
+*    @pcInData                   è¾“å…¥çš„æ•°æ®
+*    @pcIv                       åˆå§‹åŒ–å‘é‡
 * Output:
-*    @pcOutData                  Êı¾İÃÜÎÄ
+*    @pcOutData                  æ•°æ®å¯†æ–‡
 *
 * Return:       0 for success, other is error
-* Description:  Í¨ÓÃÊı¾İ¼ÓÃÜ,Ê¹ÓÃµÄÃÜÔ¿ÀàĞÍDEK/ZEK -- 00A
+* Description:  é€šç”¨æ•°æ®åŠ å¯†,ä½¿ç”¨çš„å¯†é’¥ç±»å‹DEK/ZEK -- 00A
 *
 * Date:         2014.7.24
 * ModifyRecord:
@@ -3094,21 +3226,21 @@ Tass_EncryptData(
 
 /***************************************************************************
 * Subroutine: Tass_DecryptData
-* Function:   Í¨ÓÃÊı¾İ½âÃÜ
+* Function:   é€šç”¨æ•°æ®è§£å¯†
 * Input:
-*    @iKeyIdx                    ÃÜÔ¿Ë÷Òı
-*    @pcKeyCipherByLmk           ÃÜÔ¿ÃÜÎÄ
-*    @iEncMode                   Ëã·¨Ä£Ê½
-*    @iSessionKeyMode            »á»°ÃÜÔ¿²úÉúÄ£Ê½
-*    @pcSessionKeyData           »á»°ÃÜÔ¿Òò×Ó
-*    @iPaddingMode               Êı¾İÌî³äÄ£Ê½
-*    @pcInData                   ÊäÈëµÄÊı¾İÃÜÎÄ
-*    @pcIv                       ³õÊ¼»¯ÏòÁ¿
+*    @iKeyIdx                    å¯†é’¥ç´¢å¼•
+*    @pcKeyCipherByLmk           å¯†é’¥å¯†æ–‡
+*    @iEncMode                   ç®—æ³•æ¨¡å¼
+*    @iSessionKeyMode            ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼
+*    @pcSessionKeyData           ä¼šè¯å¯†é’¥å› å­
+*    @iPaddingMode               æ•°æ®å¡«å……æ¨¡å¼
+*    @pcInData                   è¾“å…¥çš„æ•°æ®å¯†æ–‡
+*    @pcIv                       åˆå§‹åŒ–å‘é‡
 * Output:
-*    @pcOutData                  Êı¾İÃ÷ÎÄ
+*    @pcOutData                  æ•°æ®æ˜æ–‡
 *
 * Return:       0 for success, other is error
-* Description:  Í¨ÓÃÊı¾İ½âÃÜ£¬Ê¹ÓÃµÄÃÜÔ¿ÀàĞÍDEK/ZEK -- 00A
+* Description:  é€šç”¨æ•°æ®è§£å¯†ï¼Œä½¿ç”¨çš„å¯†é’¥ç±»å‹DEK/ZEK -- 00A
 *
 * Date:         2014.7.24
 * ModifyRecord:
@@ -3202,7 +3334,7 @@ Tass_DecryptData(
         return HAR_PARAM_LEN;
     }
 
-    /*** Êı¾İ×ª»» ***/
+    /*** æ•°æ®è½¬æ¢ ***/
     iDataLen = Tools_ConvertHexStr2Byte(pcInData, strlen(pcInData), aucInData);
     if(iDataLen == -1)
     {
@@ -3246,12 +3378,12 @@ Tass_DecryptData(
             iDataLen,
             aucOutData/*out*/,
             &iOutDataLen/*out*/);
+
     if(rv)
     {
         LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
         return rv;
     }
-
     rv = Tools_ConvertByte2HexStr(aucOutData, iOutDataLen, pcOutData);
     if(rv == -1)
     {
@@ -3264,17 +3396,17 @@ Tass_DecryptData(
 
 /***************************************************************************
 * Subroutine: Tass_Decrypt_PIN
-* Function:   ½âÃÜPIN
+* Function:   è§£å¯†PIN
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @pcPinBlkCipher      PIN¿éÃÜÎÄ
-*   @iPinBlkFmt          PIN¿é¸ñÊ½
-*   @pcPan               ¿¨PAN
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcPinBlkCipher      PINå—å¯†æ–‡
+*   @iPinBlkFmt          PINå—æ ¼å¼
+*   @pcPan               å¡PAN
 * Output:
-*   @pcPinText           PINÃ÷ÎÄ
+*   @pcPinText           PINæ˜æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -3301,14 +3433,7 @@ Tass_Decrypt_PIN(
                 iKeyIdx, pcKeyCipherByLmk, rv);
         return rv;
     }
-
-    rv = Tools_CheckKeyValidity_1(iKeyIdx, pcKeyCipherByLmk);
-    if(rv)
-    {
-        LOG_ERROR("Parameter iKeyIdx = [%d] or pcKeyCipherByLmk = [%s] is invalid, return code = [%#010X].",
-                iKeyIdx, pcKeyCipherByLmk, rv);
-        return rv;
-    }
+   
 
     if(pcPinBlkCipher == NULL)
     {
@@ -3328,14 +3453,14 @@ Tass_Decrypt_PIN(
         return HAR_PARAM_LEN;
     }
 
-    /*** call JE ×ª¼ÓÃÜ ***/
+    /*** call JE è½¬åŠ å¯† ***/
     rv = HSM_RCL_TransferCipherPin_Zpk2Lmk(hSessionHandle,iKeyIdx, pcKeyCipherByLmk, iPinBlkFmt, pcPan, pcPinBlkCipher, szLmkPin/*out*/);
     if(rv)
     {
         LOG_ERROR("Tass hsm api return code1 = [%d], [%#010X].", rv, rv);
         return rv;
     }
-    /*** call NG ½âÃÜPINÂë ***/
+    /*** call NG è§£å¯†PINç  ***/
     rv = HSM_RCL_DecryptPin_LMK(hSessionHandle,szLmkPin, pcPan, pcPinText/*out*/);
     if(rv)
     {
@@ -3348,17 +3473,17 @@ Tass_Decrypt_PIN(
 
 /***************************************************************************
 * Subroutine: Tass_GenUnionMac_IV
-* Function:   ¼ÆËãÒøÁªMAC£¨´øIV£©
+* Function:   è®¡ç®—é“¶è”MACï¼ˆå¸¦IVï¼‰
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @pcIV                ³õÊ¼»¯ÏòÁ¿
-*   @iMacDataLen         ´ı¼ÆËãMACµÄÊı¾İ
-*   @pcMacData           ´ı¼ÆËãMACµÄÊı¾İµÄ³¤¶È
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcIV                åˆå§‹åŒ–å‘é‡
+*   @iMacDataLen         å¾…è®¡ç®—MACçš„æ•°æ®
+*   @pcMacData           å¾…è®¡ç®—MACçš„æ•°æ®çš„é•¿åº¦
 * Output:
-*   @pcMac               MACÖµ
+*   @pcMac               MACå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -3511,11 +3636,11 @@ Tass_GenUnionMac_IV(
                 iKeyIdx,
                 szKeyCipher,
                 "",
-                0,                  /*** »á»°Ä£Ê½ ***/
-                "",                 /*** »á»°Òò×Ó ***/
+                0,                  /*** ä¼šè¯æ¨¡å¼ ***/
+                "",                 /*** ä¼šè¯å› å­ ***/
                 2,
-                aucData,            /*** ÊäÈëµÄÊı¾İ ***/
-                iDataLen,           /*** ÊäÈëµÄÊı¾İ³¤¶È ***/
+                aucData,            /*** è¾“å…¥çš„æ•°æ® ***/
+                iDataLen,           /*** è¾“å…¥çš„æ•°æ®é•¿åº¦ ***/
                 szIV,
                 pcMac);
     if(rv)
@@ -3528,18 +3653,18 @@ Tass_GenUnionMac_IV(
 
 /***************************************************************************
 * Subroutine: Tass_GenerateKey
-* Function:   ²úÉúËæ»úÃÜÔ¿
+* Function:   äº§ç”Ÿéšæœºå¯†é’¥
 * Input:
-*   @iZmkIdx             ÃÜÔ¿Ë÷Òı
-*   @pcZmkCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @pcKeyType           ÃÜÔ¿ÀàĞÍ
-*   @cScheme             Ëã·¨±êÊ¶
+*   @iZmkIdx             å¯†é’¥ç´¢å¼•
+*   @pcZmkCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcKeyType           å¯†é’¥ç±»å‹
+*   @cScheme             ç®—æ³•æ ‡è¯†
 * Output:
-*   @pcKeyCipherByZmk    ZMK¼ÓÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @pcKeyCipherByLmk    LMK¼ÓÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @pcCkv               ÃÜÔ¿Ğ£ÑéÖµ
+*   @pcKeyCipherByZmk    ZMKåŠ å¯†çš„å¯†é’¥å¯†æ–‡
+*   @pcKeyCipherByLmk    LMKåŠ å¯†çš„å¯†é’¥å¯†æ–‡
+*   @pcCkv               å¯†é’¥æ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -3573,7 +3698,7 @@ Tass_GenerateKey(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cScheme);
     if(rv)
     {
@@ -3601,15 +3726,15 @@ Tass_GenerateKey(
 
     rv = HSM_RCL_GenWorkingKey(
         hSessionHandle,
-        1,                  /*** ÃÜÔ¿²úÉúÄ£Ê½ ***/
+        1,                  /*** å¯†é’¥äº§ç”Ÿæ¨¡å¼ ***/
         pcKeyType,
         cScheme,
         iZmkIdx,
         pcZmkCipherByLmk,
         cScheme,
-        'N',               /*** ÃÜÔ¿´æ´¢±êÊ¶ ***/
+        'N',               /*** å¯†é’¥å­˜å‚¨æ ‡è¯† ***/
         0,
-        "",                /*** ÃÜÔ¿±êÇ© ***/
+        "",                /*** å¯†é’¥æ ‡ç­¾ ***/
         pcKeyCipherByLmk/*out*/,
         pcKeyCipherByZmk/*out*/,
         pcCkv/*out*/);
@@ -3623,18 +3748,18 @@ Tass_GenerateKey(
 
 /***************************************************************************
 * Subroutine: Tass_AcceptKey
-* Function:   µ¼ÈëÃÜÔ¿
+* Function:   å¯¼å…¥å¯†é’¥
 * Input:
-*   @iZmkIdx             ÃÜÔ¿Ë÷Òı
-*   @pcZmkCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @pcKeyCipherByZmk    ZMK¼ÓÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @pcKeyType           ÃÜÔ¿ÀàĞÍ
-*   @cScheme             Ëã·¨±êÊ¶
+*   @iZmkIdx             å¯†é’¥ç´¢å¼•
+*   @pcZmkCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcKeyCipherByZmk    ZMKåŠ å¯†çš„å¯†é’¥å¯†æ–‡
+*   @pcKeyType           å¯†é’¥ç±»å‹
+*   @cScheme             ç®—æ³•æ ‡è¯†
 * Output:
-*   @pcKeyCipherByLmk    LMK¼ÓÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @pcCkv               ÃÜÔ¿Ğ£ÑéÖµ
+*   @pcKeyCipherByLmk    LMKåŠ å¯†çš„å¯†é’¥å¯†æ–‡
+*   @pcCkv               å¯†é’¥æ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -3680,7 +3805,7 @@ Tass_AcceptKey(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cScheme);
     if(rv)
     {
@@ -3722,19 +3847,19 @@ Tass_AcceptKey(
 
 /***************************************************************************
 * Subroutine: Tass_ExportKey
-* Function:   µ¼³öÃÜÔ¿
+* Function:   å¯¼å‡ºå¯†é’¥
 * Input:
-*   @iZmkIdx             ÃÜÔ¿Ë÷Òı
-*   @pcZmkCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @pcKeyType           ÃÜÔ¿ÀàĞÍ
-*   @iKeyIdx             ´ıµ¼³öµÄÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    LMK¼ÓÃÜµÄ´ıµ¼³öÃÜÔ¿ÃÜÎÄ
-*   @cScheme             Ëã·¨±êÊ¶
+*   @iZmkIdx             å¯†é’¥ç´¢å¼•
+*   @pcZmkCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcKeyType           å¯†é’¥ç±»å‹
+*   @iKeyIdx             å¾…å¯¼å‡ºçš„å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    LMKåŠ å¯†çš„å¾…å¯¼å‡ºå¯†é’¥å¯†æ–‡
+*   @cScheme             ç®—æ³•æ ‡è¯†
 * Output:
-*   @pcKeyCipherByZmk    ZMK¼ÓÃÜµÄÃÜÔ¿ÃÜÎÄ
-*   @pcCkv               ÃÜÔ¿Ğ£ÑéÖµ
+*   @pcKeyCipherByZmk    ZMKåŠ å¯†çš„å¯†é’¥å¯†æ–‡
+*   @pcCkv               å¯†é’¥æ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -3776,7 +3901,7 @@ Tass_ExportKey(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cScheme);
     if(rv)
     {
@@ -3815,30 +3940,30 @@ Tass_ExportKey(
 
 /***************************************************************************
 * Subroutine: Tass_TransferCipher
-* Function:   Êı¾İ×ª¼ÓÃÜ
+* Function:   æ•°æ®è½¬åŠ å¯†
 * Input:
-*   @iSrcKeyIdx             Ô´ÃÜÔ¿Ë÷Òı
-*   @pcSrcKeyCipherByLmk    Ô´ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
-*   @iSrcEncMode            Ô´¼ÓÃÜËã·¨Ä£Ê½
-*   @iSrcDispCnt            Ô´ÃÜÔ¿·ÖÉ¢¼¶Êı
-*   @pcSrcDispData          Ô´ÃÜÔ¿·ÖÉ¢Òò×Ó
-*   @iSrcSessionKeyMode     Ô´»á»°ÃÜÔ¿²úÉúÄ£Ê½
-*   @pcSrcSessionKeyData    Ô´»á»°ÃÜÔ¿Òò×Ó
-*   @iSrcPaddingMode        Ô´Êı¾İÌî³äÄ£Ê½
-*   @pcSrcIv                Ô´³õÊ¼»¯ÏòÁ¿
-*   @iDstKeyIdx             Ä¿µÄÃÜÔ¿Ë÷Òı
-*   @pcDstKeyCipherByLmk    Ä¿µÄÃÜÔ¿ÃÜÎÄ
-*   @iDstEncMode            Ä¿µÄ¼ÓÃÜËã·¨Ä£Ê½
-*   @iDstDispCnt            Ä¿µÄÃÜÔ¿·ÖÉ¢¼¶Êı
-*   @pcDstDispData          Ä¿µÄÃÜÔ¿·ÖÉ¢Òò×Ó
-*   @iDstSessionKeyMode     Ä¿µÄ»á»°ÃÜÔ¿²úÉúÄ£Ê½
-*   @pcDstSessionKeyData    Ä¿µÄ»á»°ÃÜÔ¿Òò×Ó
-*   @iDstPaddingMode        Ä¿µÄÊı¾İÌî³äÄ£Ê½
-*   @pcDstIv                Ä¿µÄ³õÊ¼»¯ÏòÁ¿
+*   @iSrcKeyIdx             æºå¯†é’¥ç´¢å¼•
+*   @pcSrcKeyCipherByLmk    æºå¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+*   @iSrcEncMode            æºåŠ å¯†ç®—æ³•æ¨¡å¼
+*   @iSrcDispCnt            æºå¯†é’¥åˆ†æ•£çº§æ•°
+*   @pcSrcDispData          æºå¯†é’¥åˆ†æ•£å› å­
+*   @iSrcSessionKeyMode     æºä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼
+*   @pcSrcSessionKeyData    æºä¼šè¯å¯†é’¥å› å­
+*   @iSrcPaddingMode        æºæ•°æ®å¡«å……æ¨¡å¼
+*   @pcSrcIv                æºåˆå§‹åŒ–å‘é‡
+*   @iDstKeyIdx             ç›®çš„å¯†é’¥ç´¢å¼•
+*   @pcDstKeyCipherByLmk    ç›®çš„å¯†é’¥å¯†æ–‡
+*   @iDstEncMode            ç›®çš„åŠ å¯†ç®—æ³•æ¨¡å¼
+*   @iDstDispCnt            ç›®çš„å¯†é’¥åˆ†æ•£çº§æ•°
+*   @pcDstDispData          ç›®çš„å¯†é’¥åˆ†æ•£å› å­
+*   @iDstSessionKeyMode     ç›®çš„ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼
+*   @pcDstSessionKeyData    ç›®çš„ä¼šè¯å¯†é’¥å› å­
+*   @iDstPaddingMode        ç›®çš„æ•°æ®å¡«å……æ¨¡å¼
+*   @pcDstIv                ç›®çš„åˆå§‹åŒ–å‘é‡
 * Output:
-*   @pcDstCipher            ×ª¼ÓÃÜºóµÄÊı¾İÃÜÎÄ
+*   @pcDstCipher            è½¬åŠ å¯†åçš„æ•°æ®å¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.08
@@ -4074,17 +4199,17 @@ Tass_TransferCipher(
 
 /***************************************************************************
 * Subroutine: Tass_Encrypt_OfflinePin
-* Function:   ÍÑ»úPIN¼ÓÃÜ
+* Function:   è„±æœºPINåŠ å¯†
 * Input:
-*   @iKeyIdx            ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk   ÃÜÔ¿ÃÜÎÄ£¬½öµ±ÃÜÔ¿Ë÷ÒıÖµÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   @pcPan              ¿¨PANºÅ
+*   @iKeyIdx            å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk   å¯†é’¥å¯†æ–‡ï¼Œä»…å½“å¯†é’¥ç´¢å¼•å€¼ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcPan              å¡PANå·
 *   @pcAtc              TAC
-*   @pcPlaintextPin     PINÃ÷ÎÄ
+*   @pcPlaintextPin     PINæ˜æ–‡
 * Output:
-*   @pcCipherPin        PINÃÜÎÄ
+*   @pcCipherPin        PINå¯†æ–‡
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -4151,14 +4276,14 @@ Tass_Encrypt_OfflinePin(
         return HAR_PARAM_ISNULL;
     }
 
-    /*** µ÷ÓÃµ×²ãÖ¸Áî½Ó¿Ú ***/
+    /*** è°ƒç”¨åº•å±‚æŒ‡ä»¤æ¥å£ ***/
     rv = HSM_IC_OfflinePin_PlaintextPin(
                 iKeyIdx,
                 pcKeyCipherByLmk,
                 pcPan,
                 pcAtc,
                 "41",
-                pcPlaintextPin,     /*** PINÃ÷ÎÄ ***/
+                pcPlaintextPin,     /*** PINæ˜æ–‡ ***/
                 "",
                 "000000000000",
                 pcCipherPin/*out*/);
@@ -4172,17 +4297,17 @@ Tass_Encrypt_OfflinePin(
 
 /***************************************************************************
 * Subroutine: Tass_KeyTypeConversion
-* Function:   ÃÜÔ¿ÀàĞÍ×ª»»
+* Function:   å¯†é’¥ç±»å‹è½¬æ¢
 * Input:
-*   @iSrcKeyIdx            Ô´ÃÜÔ¿Ë÷Òı
-*   @pcSrcKeyCipherByLmk   Ô´ÃÜÔ¿ÃÜÎÄ£¬½öµ±ÃÜÔ¿Ë÷ÒıÖµÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   @pcSrcKeyType          Ô´ÃÜÔ¿ÀàĞÍ
-*   @pcDstKeyType          Ä¿µÄÃÜÔ¿ÀàĞÍ
+*   @iSrcKeyIdx            æºå¯†é’¥ç´¢å¼•
+*   @pcSrcKeyCipherByLmk   æºå¯†é’¥å¯†æ–‡ï¼Œä»…å½“å¯†é’¥ç´¢å¼•å€¼ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   @pcSrcKeyType          æºå¯†é’¥ç±»å‹
+*   @pcDstKeyType          ç›®çš„å¯†é’¥ç±»å‹
 * Output:
-*   @pcDstKeyCipherByLmk   Ä¿µÄÃÜÔ¿ÃÜÎÄ
-*   @pcDstKeyCv            Ä¿µÄÃÜÔ¿Ğ£ÑéÖµ
+*   @pcDstKeyCipherByLmk   ç›®çš„å¯†é’¥å¯†æ–‡
+*   @pcDstKeyCv            ç›®çš„å¯†é’¥æ ¡éªŒå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
@@ -4260,7 +4385,7 @@ Tass_KeyTypeConversion(
         cDstScheme = *pcSrcKeyCipherByLmk;
     }
 
-    /*** µ¼³öÃÜÔ¿ ***/
+    /*** å¯¼å‡ºå¯†é’¥ ***/
     rv = HSM_RCL_KeyTypeConversion(
             pcSrcKeyType,
             iSrcKeyIdx,
@@ -4279,11 +4404,11 @@ Tass_KeyTypeConversion(
 
 /***************************************************************************
 * Subroutine: Tass_SetPrintFormat
-* Function:   ÉèÖÃÉè±¸´òÓ¡¸ñÊ½
+* Function:   è®¾ç½®è®¾å¤‡æ‰“å°æ ¼å¼
 * Input:
-*    @pcFormatStr               ´òÓ¡¸ñÊ½ĞÅÏ¢
+*    @pcFormatStr               æ‰“å°æ ¼å¼ä¿¡æ¯
 * Output:
-*    ÎŞ
+*    æ— 
 *
 * Return:       0 for success, other is error
 * Description:
@@ -4299,7 +4424,7 @@ Tass_SetPrintFormat(char *pcFormatStr)
 
     if(pcFormatStr == NULL)
     {
-        strcpy(szFormatData, ">L>010ÃÜÔ¿³É·Ö>025^P>L>L>010Ğ£ÑéÖµ£º>025^T>L>L>010±¸×¢ĞÅÏ¢£º>025^0>F");
+        strcpy(szFormatData, ">L>010å¯†é’¥æˆåˆ†>025^P>L>L>010æ ¡éªŒå€¼ï¼š>025^T>L>L>010å¤‡æ³¨ä¿¡æ¯ï¼š>025^0>F");
     }
     else
     {
@@ -4311,7 +4436,7 @@ Tass_SetPrintFormat(char *pcFormatStr)
         strcpy(szFormatData, pcFormatStr);
     }
 
-    /*** ×°ÔØ´òÓ¡µÄÊı¾İ¸ñÊ½ ***/
+    /*** è£…è½½æ‰“å°çš„æ•°æ®æ ¼å¼ ***/
     rv = HSM_RCL_LoadFormatData(szFormatData);
     if(rv)
     {
@@ -4323,14 +4448,14 @@ Tass_SetPrintFormat(char *pcFormatStr)
 
 /***************************************************************************
 * Subroutine: Tass_GenPrintRandkey
-* Function:   Ëæ»úÉú³ÉÃÜÔ¿²¢´òÓ¡Êä³ö
+* Function:   éšæœºç”Ÿæˆå¯†é’¥å¹¶æ‰“å°è¾“å‡º
 * Input:
-*    @pcKeyType                 ÃÜÔ¿ÀàĞÍ
-*    @cKeyScheme                Ëã·¨±êÊ¶
-*    @pcMarkInfo                ´òÓ¡ĞÅÏ¢
+*    @pcKeyType                 å¯†é’¥ç±»å‹
+*    @cKeyScheme                ç®—æ³•æ ‡è¯†
+*    @pcMarkInfo                æ‰“å°ä¿¡æ¯
 * Output:
-*    @pcKeyCipherByLmk          ÃÜÔ¿ÃÜÎÄ
-*    @pcKeyCv                   ÃÜÔ¿Ğ£ÑéÖµ
+*    @pcKeyCipherByLmk          å¯†é’¥å¯†æ–‡
+*    @pcKeyCv                   å¯†é’¥æ ¡éªŒå€¼
 *
 * Return:       0 for success, other is error
 * Description:
@@ -4356,7 +4481,7 @@ Tass_GenPrintRandkey(
         return rv;
     }
 
-    /*** ÅĞ¶ÏËã·¨±êÊ¶ÊÇ·ñÕıÈ· ***/
+    /*** åˆ¤æ–­ç®—æ³•æ ‡è¯†æ˜¯å¦æ­£ç¡® ***/
     rv = Tools_CheckSchemeValidity(cKeyScheme);
     if(rv)
     {
@@ -4405,4 +4530,138 @@ Tass_GenPrintRandkey(
 
     return rv;
 }
+
+
+/**
+ * @brief   
+ *
+ * @param   hSessionHandle
+ * @param   iKeyIdx         ä¿æŠ¤å¯†é’¥ç´¢å¼•
+ * @param   pcKey_LMK       ä¿æŠ¤å¯†é’¥å¯†æ–‡ 
+ * @param   pcDisData       è¢«å¯¼å‡ºçš„å¯†é’¥çš„åˆ†æ•£å› å­ 
+ * @param   iZmkIdx         è¢«å¯¼å‡ºçš„å¯†é’¥ç´¢å¼•
+ * @param   pcZmkKey_LMK    è¢«å¯¼å‡ºçš„å¯†é’¥å¯†æ–‡
+ * @param   pcZmk_ZMK       ä¿æŠ¤å¯†é’¥åŠ å¯†çš„å¯†é’¥å¯†æ–‡ 
+ * @param   pcZmk_LMK       LMKåŠ å¯†æœºçš„å¯†é’¥å¯†æ–‡
+ * @param   pcZmkCv         å¯†é’¥æ ¡éªŒå€¼
+ *
+ * @return  
+ */
+HSMAPI int
+Tass_Disper_Zmk(
+    void *hSessionHandle, 
+    int  iTkIdx,
+    char *pcTkCipherByLmk,
+    char *pcDisData,
+    int  iZmkIdx,
+    char *pcZmkCipherByLmk,
+    char *pcSubZmkCipherByZmk/*out*/,
+    char *pcSubZmkCipherByLmk/*out*/, 
+    char *pcSubZmkCv/*out*/)
+{
+    int  rv = HAR_OK;
+    int iDstKeyDeriveNumber = 0;
+    char szSubZmkCipherByLmk[64 + 1] = {0};
+
+    if(iTkIdx < 0 || iTkIdx > 2048)
+    {
+        LOG_ERROR("Parameter: iTkIdx = [%d] is invalid, it must be 0 - 2048.", iTkIdx);
+        return HAR_PARAM_KEY_ID;
+    }
+
+    if(iTkIdx == 0)
+    {
+        if(pcTkCipherByLmk == NULL)
+        {
+            LOG_ERROR("Parameter: pcTkCipherByLmk = [%s] is invalid.", "NULL");
+            return HAR_PARAM_ISNULL;
+        }
+    }
+
+    if(pcDisData == NULL)
+    {
+        LOG_ERROR("Parameter: pcDisData = [%s] is invalid.", "NULL");
+        return HAR_PARAM_ISNULL;
+    }
+
+    if(strlen(pcDisData) % 2 != 0)
+    {
+         LOG_ERROR("Parameter: pcDisData'length = [%d] is invalid.", strlen(pcDisData));
+         return HAR_PARAM_DERIVE_DATA;
+    }
+    iDstKeyDeriveNumber = strlen(pcDisData)/32;
+
+    if(iZmkIdx < 0 || iZmkIdx > 2048)
+    {
+        LOG_ERROR("Parameter: iZmkIdx = [%d] is invalid, it must be 0 - 2048.", iZmkIdx);
+        return HAR_PARAM_KEY_ID;
+    }
+
+    if(iZmkIdx == 0)
+    {
+        if(pcZmkCipherByLmk == NULL)
+        {
+            LOG_ERROR("Parameter: pcZmkCipherByLmk = [%s] is invalid.", "NULL");
+            return HAR_PARAM_ISNULL;
+        }
+    }
+
+    /*** åˆ†æ•£ZMKå¯†é’¥ï¼Œå¹¶ç”¨ä¿æŠ¤å¯†é’¥ä¿æŠ¤å¯¼å‡º ***/
+    rv = HSM_IC_ExportCipherKey(
+        hSessionHandle,
+        0,                  /*** åŠ å¯†ç®—æ³•æ¨¡å¼0-ECB ***/
+        "000",              /*** ä¿æŠ¤å¯†é’¥ç±»å‹ ***/
+        iTkIdx,             /*** ä¿æŠ¤å¯†é’¥ç´¢å¼• ***/
+        pcTkCipherByLmk,    /*** ä¿æŠ¤å¯†é’¥å¯†æ–‡ ***/
+        0,                  /*** æºå¯†é’¥åˆ†æ•£çº§æ•° ***/
+        "",                 /*** æºå¯†é’¥åˆ†æ•£å› å­ ***/
+        0,                  /*** ä¼šè¯å¯†é’¥äº§ç”Ÿæ¨¡å¼ ***/
+        "",                 /*** ä¼šè¯å¯†é’¥å› å­ ***/
+        "000",              /*** è¢«å¯¼å‡ºçš„å¯†é’¥ç±»å‹ ***/
+        iZmkIdx,            /*** è¢«å¯¼å‡ºå¯†é’¥ç´¢å¼• ***/
+        pcZmkCipherByLmk,   /*** è¢«å¯¼å‡ºå¯†é’¥çš„å¯†æ–‡ ***/
+        iDstKeyDeriveNumber,/*** è¢«å¯¼å‡ºçš„å¯†é’¥åˆ†æ•£çº§æ•° ***/
+        pcDisData,          /*** åˆ†æ•£å› å­ ***/
+        "",
+        pcSubZmkCipherByZmk/*out*/,  /*** ä¿æŠ¤å¯¼å‡ºçš„å¯†é’¥å¯†æ–‡  ***/
+        pcSubZmkCv/*out*/); /*** å¯†é’¥æ ¡éªŒå€¼ ***/
+    if(rv)
+    {
+        LOG_ERROR("==========> iDstKeyDeriveNumber = [%d], len = [%d], pcDisData = [%s]\n", iDstKeyDeriveNumber, strlen(pcDisData), pcDisData);
+        LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
+        return rv;
+    }
+
+    //TODO æ­¤å¤„æœ‰å¾…äºæ”¹è¿›ï¼Œéœ€è¦å¢åŠ å¯¹å›½å¯†ç®—æ³•çš„æ”¯æŒ
+    if(strlen(pcSubZmkCipherByZmk) >= 32)
+    {
+        strcpy(szSubZmkCipherByLmk, "X");
+        strcat(szSubZmkCipherByLmk, pcSubZmkCipherByZmk);
+    }
+    else
+    {
+        strcat(szSubZmkCipherByLmk, pcSubZmkCipherByZmk);
+    }
+
+    /*** å°†ZMKåŠ å¯†çš„å¯†é’¥è½¬ä¸ºLMKåŠ å¯†çš„å¯†é’¥ ***/
+    rv = HSM_RCL_ImportKey_A6(
+        hSessionHandle,
+        "000",
+        iTkIdx,                    /*** ä¿æŠ¤å¯†é’¥ç´¢å¼•ZMK ***/
+        pcTkCipherByLmk,           /*** ä¿æŠ¤å¯†é’¥å¯†æ–‡ZMK ***/
+        szSubZmkCipherByLmk,
+        strlen(szSubZmkCipherByLmk) >= 32 ? 'X':'Z',  //TODO æ­¤å¤„è¦æ”¯æŒå›½å¯†ç®—æ³•
+        'N',
+         0,
+        "",
+        pcSubZmkCipherByLmk,      /*** LMKåŠ å¯†çš„åˆ†æ•£åçš„ZMKå¯†é’¥å¯†æ–‡ ***/
+        pcSubZmkCv/*OUT*/);       /*** åˆ†æ•£åçš„ZMKå¯†é’¥æ ¡éªŒå€¼ ***/
+    if(rv)
+    {
+        LOG_ERROR("Tass hsm api return code = [%d], [%#010X].", rv, rv);
+    }
+
+    return rv;
+}
+
 

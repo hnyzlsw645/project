@@ -2,7 +2,7 @@
 |    hsmapi.h                                                           |
 |    Version :     1.0                                                  |
 |    Author:       Luo Cangjian                                         |
-|    Description:  SJJ1310ÃÜÂë»ú½ğÈÚ½»Ò×Í¨ÓÃ½Ó¿Ú                        |
+|    Description:  SJJ1310å¯†ç æœºé‡‘èäº¤æ˜“é€šç”¨æ¥å£                        |
 |                                                                       |
 |    Copyright :   Beijing JN TASS Technology Co., Ltd.                 |
 |    data:         2015-06-05. Create                                   |
@@ -24,11 +24,11 @@ extern "C" {
 
 /***************************************************************************
  * Subroutine: SDF_HsmApiInit
- * Function:   Í¨¹ıÖ¸¶¨ÅäÖÃÎÄ¼şµÄ·½Ê½³õÊ¼»¯½Ó¿Ú
+ * Function:   é€šè¿‡æŒ‡å®šé…ç½®æ–‡ä»¶çš„æ–¹å¼åˆå§‹åŒ–æ¥å£
  * Input:
- *    @pcConfigFilePath      ÅäÖÃÎÄ¼şÂ·¾¶
+ *    @pcConfigFilePath      é…ç½®æ–‡ä»¶è·¯å¾„
  * Output:
- *    ÎŞ
+ *    æ— 
  *
  * Return:       0 for success, other is error
  * Description:
@@ -41,14 +41,14 @@ int SDF_HsmApiInit(char *pcConfigFilePath);
 
 /***************************************************************************
 * Subroutine: SDF_OpenDevice
-* Function:   ´ò¿ªÉè±¸¾ä±ú
+* Function:   æ‰“å¼€è®¾å¤‡å¥æŸ„
 * Input:
-*    @pphDeviceHandle    Éè±¸¾ä±ú
-*    @pcIp               IPµØÖ·
-*    @iPort              ¶Ë¿ÚºÅ
-*    @iMsgHeadLen        ÏûÏ¢Í·³¤¶È
+*    @pphDeviceHandle    è®¾å¤‡å¥æŸ„
+*    @pcIp               IPåœ°å€
+*    @iPort              ç«¯å£å·
+*    @iMsgHeadLen        æ¶ˆæ¯å¤´é•¿åº¦
 * Output:
-*    ÎŞ
+*    æ— 
 *
 * Return:       0 for success, other is error
 * Description:
@@ -57,15 +57,15 @@ int SDF_HsmApiInit(char *pcConfigFilePath);
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int SDF_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLen);
+int SDF_OpenDevice(void **phDeviceHandle, char *ipaddr, int port );
 
 /***************************************************************************
 * Subroutine: SDF_CloseDevice
-* Function:   ¹Ø±ÕÉè±¸¾ä±ú
+* Function:   å…³é—­è®¾å¤‡å¥æŸ„
 * Input:
-*    @phDeviceHandle    Éè±¸¾ä±ú
+*    @phDeviceHandle    è®¾å¤‡å¥æŸ„
 * Output:
-*    ÎŞ
+*    æ— 
 *
 * Return:       0 for success, other is error
 * Description:
@@ -74,16 +74,16 @@ int SDF_OpenDevice(void **pphDeviceHandle, char *pcIp, int iPort, int iMsgHeadLe
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int SDF_CloseDevice(void *phDeviceHandle);
+int SDF_CloseDevice(void *hDeviceHandle);
 
 /***************************************************************************
 * Subroutine: SDF_OpenSession
-* Function:   ´ò¿ª»á»°¾ä±ú
+* Function:   æ‰“å¼€ä¼šè¯å¥æŸ„
 * Input:
-*    @phDeviceHandle      Éè±¸¾ä±ú
-*    @pphSessionHandle    »á»°¾ä±ú
+*    @phDeviceHandle      è®¾å¤‡å¥æŸ„
+*    @pphSessionHandle    ä¼šè¯å¥æŸ„
 * Output:
-*    ÎŞ
+*    æ— 
 *
 * Return:       0 for success, other is error
 * Description:
@@ -92,56 +92,56 @@ int SDF_CloseDevice(void *phDeviceHandle);
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int SDF_OpenSession(void *phDeviceHandle, void **pphSessionHandle);
+int SDF_OpenSession(void *hDeviceHandle, void **phSessionHandle);
 
 /***************************************************************************
 * Subroutine: SDF_CloseSession
-* Function:   ¹Ø±Õ»á»°¾ä±ú
+* Function:   å…³é—­ä¼šè¯å¥æŸ„
 * Input:
-*    @phSessionHandle    »á»°¾ä±ú
+*    @phSessionHandle    ä¼šè¯å¥æŸ„
 * Output:
-*    ÎŞ
+*    æ— 
 *
 * Return:       0 for success, other is error
-* Description:  ¹Ø±Õ»á»°¾ä±ú
+* Description:  å…³é—­ä¼šè¯å¥æŸ„
 *
 * Author:       Luo Cangjian
 * Date:         2015.7.16
 * ModifyRecord:
 * *************************************************************************/
-int SDF_CloseSession(void *phSessionHandle);
+int SDF_CloseSession(void *hSessionHandle);
 
 /***************************************************************************
-* Subroutine: Tass_GenerateRandom 
-* Function:   ²úÉúËæ»úÊı
+* Subroutine: SDF_GenerateRandom 
+* Function:   äº§ç”Ÿéšæœºæ•°
 * Input:
-*   @hSessionHandle  »á»°¾ä±ú
-*   @iRandomLen      Ëæ»úÊı×Ö½ÚÊı
+*   @hSessionHandle  ä¼šè¯å¥æŸ„
+*   @iRandomLen      éšæœºæ•°å­—èŠ‚æ•°
 * Output:
-*   @pcRandom        Ëæ»úÊı¾İ£¨Ê®½øÖÆ×Ö·û´®£©
+*   @pcRandom        éšæœºæ•°æ®ï¼ˆåè¿›åˆ¶å­—ç¬¦ä¸²ï¼‰
 *
-* Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+* Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
 * Description:
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
 * *************************************************************************/
 HSMAPI int
-Tass_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
+SDF_GenerateRandom(void *hSessionHandle, int iRandomLen, char *pcRandom/*out*/);
 
 /***************************************************************************
 * Subroutine: Tass_Gen_ANSI_Mac
-* Function:   ²úÉúANSIX9.19MAC
+* Function:   äº§ç”ŸANSIX9.19MAC
 * Input:
-*   @iKeyIdx             ÃÜÔ¿Ë÷Òı
-*   @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±¸Ã²ÎÊıÓĞĞ§
-*   @iInDataLen          ¼ÆËãMACÖµµÄÊı¾İ³¤¶È
-*   @pcInData            ¼ÆËãMACÖµµÄÊı¾İ
+*   @iKeyIdx             å¯†é’¥ç´¢å¼•
+*   @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶è¯¥å‚æ•°æœ‰æ•ˆ
+*   @iInDataLen          è®¡ç®—MACå€¼çš„æ•°æ®é•¿åº¦
+*   @pcInData            è®¡ç®—MACå€¼çš„æ•°æ®
 * Output:
-*   @pcMac               MACÖµ
+*   @pcMac               MACå€¼
 *
-* Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
-* Description:  ¸ù¾İÊäÈëµÄMACÊı¾İ²ÉÓÃ±ê×¼µÄANSIX9.19Ëã·¨²úÉúMAC
+* Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+* Description:  æ ¹æ®è¾“å…¥çš„MACæ•°æ®é‡‡ç”¨æ ‡å‡†çš„ANSIX9.19ç®—æ³•äº§ç”ŸMAC
 * Author:       Luo Cangjian
 * Date:         2015.06.05
 * ModifyRecord:
@@ -157,19 +157,19 @@ Tass_Gen_ANSI_Mac(
 
 /***************************************************************************
  *  Subroutine: Tass_Generate_Zmk
- *  Function:   Ëæ»úÉú³ÉZMK
+ *  Function:   éšæœºç”ŸæˆZMK
  *  Input:
- *    @hSessionHandle      »á»°¾ä±ú
- *    @iKeyIdx             ÃÜÔ¿Ë÷Òı
- *    @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
- *    @cZmkScheme          ZMKËã·¨±êÊ¶
+ *    @hSessionHandle      ä¼šè¯å¥æŸ„
+ *    @iKeyIdx             å¯†é’¥ç´¢å¼•
+ *    @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+ *    @cZmkScheme          ZMKç®—æ³•æ ‡è¯†
  *  Output:
- *    @pcZmkCipherByZmk    ZMK¼ÓÃÜµÄZMKÃÜÔ¿ÃÜÎÄ
- *    @pcZmkCipherByLmk    LMK¼ÓÃÜµÄZMKÃÜÔ¿ÃÜÎÄ
- *    @pcZmkCv             ZMKĞ£ÑéÖµ
+ *    @pcZmkCipherByZmk    ZMKåŠ å¯†çš„ZMKå¯†é’¥å¯†æ–‡
+ *    @pcZmkCipherByLmk    LMKåŠ å¯†çš„ZMKå¯†é’¥å¯†æ–‡
+ *    @pcZmkCv             ZMKæ ¡éªŒå€¼
  * 
- *  Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
- *  Description:  °Ñ°´ANSIX9.8¸ñÊ½×éÖ¯µÄPINµÄÃ÷ÎÄÓÃÖ¸¶¨µÄPIK½øĞĞ¼ÓÃÜ
+ *  Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
+ *  Description:  æŠŠæŒ‰ANSIX9.8æ ¼å¼ç»„ç»‡çš„PINçš„æ˜æ–‡ç”¨æŒ‡å®šçš„PIKè¿›è¡ŒåŠ å¯†
  *  Author:       Luo Cangjian
  *  Date:         2015.06.05
  *  ModifyRecord:
@@ -185,18 +185,18 @@ Tass_Generate_Zmk(
         char *pcZmkCv);
 /***************************************************************************
  *  Subroutine: Tass_Generate_Pik
- *  Function:   Ëæ»úÉú³ÉPIK
+ *  Function:   éšæœºç”ŸæˆPIK
  *  Input:
- *    @hSessionHandle      »á»°¾ä±ú
- *    @iKeyIdx             ÃÜÔ¿Ë÷Òı
- *    @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
- *    @cPikScheme          PIKËã·¨±êÊ¶
+ *    @hSessionHandle      ä¼šè¯å¥æŸ„
+ *    @iKeyIdx             å¯†é’¥ç´¢å¼•
+ *    @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+ *    @cPikScheme          PIKç®—æ³•æ ‡è¯†
  *  Output:
- *    @pcPikCipherByZmk    ZMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
- *    @pcPikCipherByLmk    LMK¼ÓÃÜµÄPIKÃÜÔ¿ÃÜÎÄ
- *    @pcPikCv             PIKĞ£ÑéÖµ
+ *    @pcPikCipherByZmk    ZMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
+ *    @pcPikCipherByLmk    LMKåŠ å¯†çš„PIKå¯†é’¥å¯†æ–‡
+ *    @pcPikCv             PIKæ ¡éªŒå€¼
  * 
- *  Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *  Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *  Description:
  *  Author:       Luo Cangjian
  *  Date:         2015.06.05
@@ -214,18 +214,18 @@ Tass_Generate_Pik(
 
 /***************************************************************************
  *  Subroutine: Tass_Generate_Mak
- *  Function:   Ëæ»úÉú³ÉMAK
+ *  Function:   éšæœºç”ŸæˆMAK
  *  Input:
- *    @hSessionHandle      »á»°¾ä±ú
- *    @iKeyIdx             ÃÜÔ¿Ë÷Òı
- *    @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
- *    @cMakScheme          MAKËã·¨±êÊ¶
+ *    @hSessionHandle      ä¼šè¯å¥æŸ„
+ *    @iKeyIdx             å¯†é’¥ç´¢å¼•
+ *    @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+ *    @cMakScheme          MAKç®—æ³•æ ‡è¯†
  *  Output:
- *    @pcMakCipherByZmk    ZMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
- *    @pcMakCipherByLmk    LMK¼ÓÃÜµÄMAKÃÜÔ¿ÃÜÎÄ
- *    @pcMakCv             MAKĞ£ÑéÖµ
+ *    @pcMakCipherByZmk    ZMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
+ *    @pcMakCipherByLmk    LMKåŠ å¯†çš„MAKå¯†é’¥å¯†æ–‡
+ *    @pcMakCv             MAKæ ¡éªŒå€¼
  * 
- *  Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *  Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *  Description:
  *  Author:       Luo Cangjian
  *  Date:         2015.06.05
@@ -243,18 +243,18 @@ Tass_Generate_Mak(
 
 /***************************************************************************
  *  Subroutine: Tass_Generate_Zek
- *  Function:   Ëæ»úÉú³ÉZEK
+ *  Function:   éšæœºç”ŸæˆZEK
  *  Input:
- *    @hSessionHandle      »á»°¾ä±ú
- *    @iKeyIdx             ÃÜÔ¿Ë÷Òı
- *    @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
- *    @cZekScheme          ZEKËã·¨±êÊ¶
+ *    @hSessionHandle      ä¼šè¯å¥æŸ„
+ *    @iKeyIdx             å¯†é’¥ç´¢å¼•
+ *    @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+ *    @cZekScheme          ZEKç®—æ³•æ ‡è¯†
  *  Output:
- *    @pcZekCipherByZmk    ZMK¼ÓÃÜµÄZEKÃÜÔ¿ÃÜÎÄ
- *    @pcZekCipherByLmk    LMK¼ÓÃÜµÄZEKÃÜÔ¿ÃÜÎÄ
- *    @pcZekCv             ZEKĞ£ÑéÖµ
+ *    @pcZekCipherByZmk    ZMKåŠ å¯†çš„ZEKå¯†é’¥å¯†æ–‡
+ *    @pcZekCipherByLmk    LMKåŠ å¯†çš„ZEKå¯†é’¥å¯†æ–‡
+ *    @pcZekCv             ZEKæ ¡éªŒå€¼
  * 
- *  Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *  Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *  Description:
  *  Author:       Luo Cangjian
  *  Date:         2015.06.05
@@ -271,17 +271,17 @@ Tass_Generate_Zek(
         char *pcZekCv/*out*/);
 /***************************************************************************
  *  Subroutine: Tass_Decrypt_PIN
- *  Function:   ½âÃÜPIN
+ *  Function:   è§£å¯†PIN
  *  Input:
- *    @iKeyIdx             ÃÜÔ¿Ë÷Òı
- *    @pcKeyCipherByLmk    ÃÜÔ¿ÃÜÎÄ£¬½öµ±Ë÷ÒıÖµÎª0Ê±£¬¸Ã²ÎÊıÓĞĞ§
- *    @pcPinBlkCipher      PIN¿éÃÜÎÄ
- *    @iPinBlkFmt          PIN¿é¸ñÊ½
- *    @pcPan               ¿¨PAN
+ *    @iKeyIdx             å¯†é’¥ç´¢å¼•
+ *    @pcKeyCipherByLmk    å¯†é’¥å¯†æ–‡ï¼Œä»…å½“ç´¢å¼•å€¼ä¸º0æ—¶ï¼Œè¯¥å‚æ•°æœ‰æ•ˆ
+ *    @pcPinBlkCipher      PINå—å¯†æ–‡
+ *    @iPinBlkFmt          PINå—æ ¼å¼
+ *    @pcPan               å¡PAN
  *  Output:
- *    @pcPinText           PINÃ÷ÎÄ
+ *    @pcPinText           PINæ˜æ–‡
  * 
- *  Return:       ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *  Return:       æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *  Description:
  *  Author:       Luo Cangjian
  *  Date:         2015.06.05
@@ -299,20 +299,20 @@ Tass_Decrypt_PIN(
 
 /***************************************************************************
  * Subroutine: Tass_Disper_Zmk
- * Function:   ÓÉÒ»¸öZMK·ÖÉ¢Éú³ÉÁíÍâÒ»¸ö×ÓÃÜÔ¿£¬²¢Í¨¹ıZMKÃÜÔ¿¼ÓÃÜ±£»¤µ¼³ö
+ * Function:   ç”±ä¸€ä¸ªZMKåˆ†æ•£ç”Ÿæˆå¦å¤–ä¸€ä¸ªå­å¯†é’¥ï¼Œå¹¶é€šè¿‡ZMKå¯†é’¥åŠ å¯†ä¿æŠ¤å¯¼å‡º
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @iKeyIdx         ÃÜÔ¿Ë÷Òı
- *   @pcKey_LMK       ÃÜÔ¿ÃÜÎÄ
- *   @pcDisData       ·ÖÉ¢²ÎÊı
- *   @iZmkIdx         µ¼³öÃÜÔ¿Ë÷Òı
- *   @pcZmkKey_LMK    ĞèÒªµ¼³öZMKÃÜÔ¿ÃÜÎÄ
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @iKeyIdx         å¯†é’¥ç´¢å¼•
+ *   @pcKey_LMK       å¯†é’¥å¯†æ–‡
+ *   @pcDisData       åˆ†æ•£å‚æ•°
+ *   @iZmkIdx         å¯¼å‡ºå¯†é’¥ç´¢å¼•
+ *   @pcZmkKey_LMK    éœ€è¦å¯¼å‡ºZMKå¯†é’¥å¯†æ–‡
  * Output:
- *   @pcZmk_LMK       ZMKÃÜÎÄ
- *   @pcZmk_ZMK       ZMK±£»¤·ÖÉ¢µÄ×ÓÃÜÔ¿µ¼³ö
- *   @pcZmkCv         ÃÜÔ¿Ğ£ÑéÖµ
+ *   @pcZmk_LMK       ZMKå¯†æ–‡
+ *   @pcZmk_ZMK       ZMKä¿æŠ¤åˆ†æ•£çš„å­å¯†é’¥å¯¼å‡º
+ *   @pcZmkCv         å¯†é’¥æ ¡éªŒå€¼
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -332,19 +332,19 @@ Tass_Disper_Zmk(
 
  /***************************************************************************
  * Subroutine: Tass_EncryptTrackData
- * Function:   Ê¹ÓÃZEK¼ÓÃÜ´ÅµÀÊı¾İ¡£
+ * Function:   ä½¿ç”¨ZEKåŠ å¯†ç£é“æ•°æ®ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @iKeyIdx         ÃÜÔ¿Ë÷Òı
- *   @pcKey_LMK       ÃÜÔ¿ÃÜÎÄ
- *   @pcTrackText     ´ÅµÀÃÜÎÄ
- *   @iTrackTextLen   ´ÅµÀÃÜÎÄ³¤¶È
- *   @iAlgId          ½âÃÜÄ£Ê½
- *   @pcIV            ³õÊ¼»¯IV 
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @iKeyIdx         å¯†é’¥ç´¢å¼•
+ *   @pcKey_LMK       å¯†é’¥å¯†æ–‡
+ *   @pcTrackText     ç£é“å¯†æ–‡
+ *   @iTrackTextLen   ç£é“å¯†æ–‡é•¿åº¦
+ *   @iAlgId          è§£å¯†æ¨¡å¼
+ *   @pcIV            åˆå§‹åŒ–IV 
  * Output:
- *   @pcTrackCipher   ´ÅµÀÃÜÎÄ
+ *   @pcTrackCipher   ç£é“å¯†æ–‡
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -364,20 +364,20 @@ Tass_EncryptTrackData(
 
 /***************************************************************************
  * Subroutine: Tass_DecryptTrackData
- * Function:   Ê¹ÓÃZEK½âÃÜ´ÅµÀÊı¾İ¡£
+ * Function:   ä½¿ç”¨ZEKè§£å¯†ç£é“æ•°æ®ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @iKeyIdx         ZEKÃÜÔ¿Ë÷Òı
- *   @pcKey_LMK       ZEKÃÜÔ¿ÃÜÎÄ
- *   @pcTrackText     ´ÅµÀÃÜÎÄ
- *   @iTrackTextLen   ´ÅµÀÃÜÎÄ³¤¶È
- *   @iAlgId          ½âÃÜÄ£Ê½
- *   @iPadFlg         Êı¾İÌî³ä±êÊ¶
- *   @pcIV            ³õÊ¼»¯IV 
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @iKeyIdx         ZEKå¯†é’¥ç´¢å¼•
+ *   @pcKey_LMK       ZEKå¯†é’¥å¯†æ–‡
+ *   @pcTrackText     ç£é“å¯†æ–‡
+ *   @iTrackTextLen   ç£é“å¯†æ–‡é•¿åº¦
+ *   @iAlgId          è§£å¯†æ¨¡å¼
+ *   @iPadFlg         æ•°æ®å¡«å……æ ‡è¯†
+ *   @pcIV            åˆå§‹åŒ–IV 
  * Output:
- *   @pcTrackCipher   ´ÅµÀÃ÷ÎÄ
+ *   @pcTrackCipher   ç£é“æ˜æ–‡
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -386,28 +386,28 @@ Tass_EncryptTrackData(
 HSMAPI int 
 Tass_DecryptTrackData(
      void *hSessionHandle,
-     int iKeyIdx,
+     int  iKeyIdx,
      char *pcKey_LMK,
      char *pcTrackCipher,
-     int iTrackTextLen,
-     int iAlgId,
-     int iPadFlg,
+     int  iTrackTextLen,
+     int  iAlgId,
+     int  iPadFlg,
      char *pcIV,
      char *pcTrackText/*out*/);
 
  /***************************************************************************
  * Subroutine: Tass_PRIVATE_Oper
- * Function:   Ë½Ô¿½âÃÜÔËËã½Ó¿Ú¡£
+ * Function:   ç§é’¥è§£å¯†è¿ç®—æ¥å£ã€‚
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @keytype         ÃÜÔ¿ÀàĞÍ
- *   @Rsa_LMK         rsa±¾µØÃÜÔ¿
- *   @SM2_LMK         sm2±¾µØÃÜÔ¿
- *   @indata          Íâ²¿ËÍÈëÊı¾İ
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @keytype         å¯†é’¥ç±»å‹
+ *   @Rsa_LMK         rsaæœ¬åœ°å¯†é’¥
+ *   @SM2_LMK         sm2æœ¬åœ°å¯†é’¥
+ *   @indata          å¤–éƒ¨é€å…¥æ•°æ®
  * Output:
- *   @outdata         Ë½Ô¿½âÃÜºóÊı¾İ
+ *   @outdata         ç§é’¥è§£å¯†åæ•°æ®
  *
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -425,18 +425,18 @@ Tass_PRIVATE_Oper(
 
 /***************************************************************************
  *    Subroutine: Tass_PubKey_Oper
- *    Function:   RSA/SM2¹«Ô¿¼ÓÃÜÔËËã½Ó¿Ú
+ *    Function:   RSA/SM2å…¬é’¥åŠ å¯†è¿ç®—æ¥å£
  *    Input:
- *      @hSessionHandle  »á»°¾ä±ú
- *      @keytype         Ê¶±ğRSA»òSM2
- *      @indata          ÊäÈëÊı¾İĞèÒªÎª¹«Ô¿µÈ³¤Êı¾İ
- *      @RSAPubKeyE      ¹«Ô¿Ä£
- *      @RSAPubKeyN      Ö¸Êı
- *      @SM2_PUBKEY      SM2¹«Ô¿
+ *      @hSessionHandle  ä¼šè¯å¥æŸ„
+ *      @keytype         è¯†åˆ«RSAæˆ–SM2
+ *      @indata          è¾“å…¥æ•°æ®éœ€è¦ä¸ºå…¬é’¥ç­‰é•¿æ•°æ®
+ *      @RSAPubKeyE      å…¬é’¥æ¨¡
+ *      @RSAPubKeyN      æŒ‡æ•°
+ *      @SM2_PUBKEY      SM2å…¬é’¥
  *    Output:
- *      @outdata         ¼ÓÃÜºóµÄÊı¾İ
+ *      @outdata         åŠ å¯†åçš„æ•°æ®
  *   
- *    Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *    Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *    Description:
  *    Author:       Luo Cangjian
  *    Date:         2015.06.05
@@ -454,25 +454,25 @@ Tass_PubKey_Oper(
 
 /***************************************************************************
  * Subroutine: Tass_GenRSAKey
- * Function:   Ëæ»úÉú³ÉRSAÃÜÔ¿¶Ô£¬²¢Ê¹ÓÃZMK¼ÓÃÜµ¼³ö
+ * Function:   éšæœºç”ŸæˆRSAå¯†é’¥å¯¹ï¼Œå¹¶ä½¿ç”¨ZMKåŠ å¯†å¯¼å‡º
  * Input:
- *   @hSessionHandle  »á»°¾ä±ú
- *   @RsaLen          Rsa¹«Ô¿Ä£³¤
- *   @zmkIndex        ±£»¤ÃÜÔ¿Ë÷Òı
- *   @zmk_Lmk         ±£»¤ÃÜÔ¿ÃÜÎÄ
- *   @zmk_disData     ±£»¤ÃÜÔ¿µÄ·ÖÉ¢Òò×Ó
- *   @mode            ¼ÓÃÜËã·¨Ä£Ê½£¬0£ºECB  1£ºCBC
+ *   @hSessionHandle  ä¼šè¯å¥æŸ„
+ *   @RsaLen          Rsaå…¬é’¥æ¨¡é•¿
+ *   @zmkIndex        ä¿æŠ¤å¯†é’¥ç´¢å¼•
+ *   @zmk_Lmk         ä¿æŠ¤å¯†é’¥å¯†æ–‡
+ *   @zmk_disData     ä¿æŠ¤å¯†é’¥çš„åˆ†æ•£å› å­
+ *   @mode            åŠ å¯†ç®—æ³•æ¨¡å¼ï¼Œ0ï¼šECB  1ï¼šCBC
  * Output:
- *   @Rsa_D_ZMK       Ë½Ô¿·ÖÁ¿dÃÜÎÄ
- *   @Rsa_P_ZMK       Ë½Ô¿·ÖÁ¿pÃÜÎÄ
- *   @Rsa_Q_ZMK       Ë½Ô¿·ÖÁ¿qÃÜÎÄ
- *   @Rsa_DP_ZMK      Ë½Ô¿·ÖÁ¿dpÃÜÎÄ
- *   @Rsa_DQ_ZMK      Ë½Ô¿·ÖÁ¿dqÃÜÎÄ
- *   @Rsa_QINV_ZMK    Ë½Ô¿·ÖÁ¿qinvÃÜÎÄ
- *   @Rsa_N           ¹«Ô¿Ä£Ã÷ÎÄ
- *   @Rsa_E           ¹«Ô¿Ö¸ÊıeÃ÷ÎÄ
- *   @Rsa_LMK*        RSA±¾µØÃÜÎÄ
- * Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *   @Rsa_D_ZMK       ç§é’¥åˆ†é‡då¯†æ–‡
+ *   @Rsa_P_ZMK       ç§é’¥åˆ†é‡på¯†æ–‡
+ *   @Rsa_Q_ZMK       ç§é’¥åˆ†é‡qå¯†æ–‡
+ *   @Rsa_DP_ZMK      ç§é’¥åˆ†é‡dpå¯†æ–‡
+ *   @Rsa_DQ_ZMK      ç§é’¥åˆ†é‡dqå¯†æ–‡
+ *   @Rsa_QINV_ZMK    ç§é’¥åˆ†é‡qinvå¯†æ–‡
+ *   @Rsa_N           å…¬é’¥æ¨¡æ˜æ–‡
+ *   @Rsa_E           å…¬é’¥æŒ‡æ•°eæ˜æ–‡
+ *   @Rsa_LMK*        RSAæœ¬åœ°å¯†æ–‡
+ * Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  * Description:
  * Author:       Luo Cangjian
  * Date:         2015.06.05
@@ -498,17 +498,17 @@ Tass_GenRSAKey(
 
 /***************************************************************************
  *     Subroutine: Tass_DeriveKeyExportedByRsa
- *     Function:   ½«ZMK·ÖÉ¢²úÉú×ÓÃÜÔ¿£¬È»ºóÓÃ±£»¤ÃÜÔ¿½«×ÓÃÜÔ¿¼ÓÃÜ±£»¤µ¼³ö
+ *     Function:   å°†ZMKåˆ†æ•£äº§ç”Ÿå­å¯†é’¥ï¼Œç„¶åç”¨ä¿æŠ¤å¯†é’¥å°†å­å¯†é’¥åŠ å¯†ä¿æŠ¤å¯¼å‡º
  *     Input:
- *       @hSessionHandle         »á»°¾ä±ú
- *       @pcZmkCipher_Lmk        ´ı·ÖÉ¢µÄzmk
- *       @pcPublicKey            ±£»¤¹«Ô¿£¬Der±àÂëµÄRSA¹«Ô¿
- *       @pcDisData              ZMKÃÜÔ¿µÄ·ÖÉ¢Òò×Ó
+ *       @hSessionHandle         ä¼šè¯å¥æŸ„
+ *       @pcZmkCipher_Lmk        å¾…åˆ†æ•£çš„zmk
+ *       @pcPublicKey            ä¿æŠ¤å…¬é’¥ï¼ŒDerç¼–ç çš„RSAå…¬é’¥
+ *       @pcDisData              ZMKå¯†é’¥çš„åˆ†æ•£å› å­
  *     Output:
- *       @pcSubKeyCipher_TK      ×ÓÃÜÔ¿ÃÜÎÄ
- *       @pcSubKeyCipher_Lmk     LMK¼ÓÃÜµÄ×ÓÃÜÔ¿ÃÜÎÄ
- *       @pcSubKeyCv             ×ÓÃÜÔ¿Ğ£ÑéÖµ
- *     Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *       @pcSubKeyCipher_TK      å­å¯†é’¥å¯†æ–‡
+ *       @pcSubKeyCipher_Lmk     LMKåŠ å¯†çš„å­å¯†é’¥å¯†æ–‡
+ *       @pcSubKeyCv             å­å¯†é’¥æ ¡éªŒå€¼
+ *     Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *     Description:
  *     Author:       Luo Cangjian
  *     Date:         2015.06.05
@@ -526,18 +526,18 @@ Tass_DeriveKeyExportedByRsa(
 
 /***************************************************************************
  *   Subroutine: Tass_GenSm2Key
- *   Function:   Ëæ»úÉú³ÉSM2ÃÜÔ¿¶Ô£¬²¢Ê¹ÓÃZMK¼ÓÃÜµ¼³ö
+ *   Function:   éšæœºç”ŸæˆSM2å¯†é’¥å¯¹ï¼Œå¹¶ä½¿ç”¨ZMKåŠ å¯†å¯¼å‡º
  *   Input:
- *     @hSessionHandle         »á»°¾ä±ú
- *     @zmkIndex               ÃÜÔ¿Ë÷Òı
- *     @zmk_Lmk                ±£»¤SM2ÃÜÔ¿·ÖÁ¿µÄ±£»¤ÃÜÔ¿
- *     @zmk_disData            ZMK·ÖÉ¢²ÎÊı£¬NULLÊ±²»·ÖÉ¢
- *     @mode                   ¼ÓÃÜËã·¨Ä£Ê½
+ *     @hSessionHandle         ä¼šè¯å¥æŸ„
+ *     @zmkIndex               å¯†é’¥ç´¢å¼•
+ *     @zmk_Lmk                ä¿æŠ¤SM2å¯†é’¥åˆ†é‡çš„ä¿æŠ¤å¯†é’¥
+ *     @zmk_disData            ZMKåˆ†æ•£å‚æ•°ï¼ŒNULLæ—¶ä¸åˆ†æ•£
+ *     @mode                   åŠ å¯†ç®—æ³•æ¨¡å¼
  *   Output:
- *     @SM2_D_ZMK              Ë½Ô¿·ÖÁ¿DÃÜÎÄ 
- *     @SM2_PUBKEY             DER±àÂëµÄ¹«Ô¿
- *     @SM2_LMK                LMK¼ÓÃÜµÄË½Ô¿
- *   Return:            ³É¹¦·µ»Ø0£¬ÆäËû±íÊ¾Ê§°Ü
+ *     @SM2_D_ZMK              ç§é’¥åˆ†é‡Då¯†æ–‡ 
+ *     @SM2_PUBKEY             DERç¼–ç çš„å…¬é’¥
+ *     @SM2_LMK                LMKåŠ å¯†çš„ç§é’¥
+ *   Return:            æˆåŠŸè¿”å›0ï¼Œå…¶ä»–è¡¨ç¤ºå¤±è´¥
  *   Description:
  *   Author:       Luo Cangjian
  *   Date:         2015.06.05

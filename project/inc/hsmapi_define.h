@@ -22,19 +22,6 @@
 #define TASS_SPRINTF snprintf
 #endif
 
-typedef struct Device_struct{
-    unsigned int status;     /*** 0 - 未初始化; 1 - 已初始化; ***/
-    int          sockfd;
-    char         ip[16];
-    unsigned int port;
-    int           msgHeadLen;
-}DEVICE_STRUCT;
-
-typedef struct Session_struct{
-    int status;             /*** 0 - 未获取socket; 1 - 已获取socket ***/
-    int sockfd;
-    int msgHeadLen;
-}SESSION_STRUCT;
 
 /*** 数据长度 ***/
 #define PANFMT_PIN_LMK          99
@@ -165,7 +152,9 @@ typedef struct Session_struct{
 #define HAR_OPENDEVICE                HAR_BASE + 0x0000002C              /*** 打开设备失败 ***/
 #define HAR_OPENSESSION               HAR_BASE + 0x0000002D              /*** 创建会话失败 ***/
 #define HAR_DEVICEHANDLE_INVALID      HAR_BASE + 0x0000002E              /*** 设备句柄无效 ***/
-#define HAR_SESSIONHANDLE_INVALID     HAR_BASE + 0x0000002E              /*** 会话句柄无效 ***/
+#define HAR_SESSIONHANDLE_INVALID     HAR_BASE + 0x0000002F              /*** 会话句柄无效 ***/
+#define HAR_SOCK_TIMEOUT     					HAR_BASE + 0x00000030              /*** socket通讯超时 ***/
+
 
 #endif    /***  __HSM_API_DEFINE_H__ ***/
 

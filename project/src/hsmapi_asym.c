@@ -2,7 +2,7 @@
 |    hsmapi_asym.c                                                      |
 |    Version :     1.0                                                  |
 |    Author:       Luo Cangjian                                         |
-|    Description:  SJJ1310ÃÜÂë»ú½Ó¿Ú·Ç¶Ô³ÆËã·¨Ö÷»úÃüÁîº¯Êı              |
+|    Description:  SJJ1310å¯†ç æœºæ¥å£éå¯¹ç§°ç®—æ³•ä¸»æœºå‘½ä»¤å‡½æ•°              |
 |                                                                       |
 |    Copyright :   Beijing JN TASS Technology Co., Ltd.                 |
 |    data:         2015-06-04. Create                                   |
@@ -22,15 +22,16 @@
 #include "hsmapi_tools.h"
 #include "hsmapi_init.h"
 #include "hsmapi_asym.h"
+#include "hsmsocket.h"
 
 /*
- * HSM_SM2_GenerateNewKeyPair, ²úÉúÒ»¶ÔĞÂµÄSM2ÃÜÔ¿¶Ô
- * iKeyIndex            IN        Òª²úÉúµÄSM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶²»´æ´¢
- * pcKeyLabel           IN        SM2ÃÜÔ¿±êÇ©£¬½öµ±iKeyIndex>0ÇÒ!=9999Ê±ÓĞĞ§;
- * pucDerPublicKey      OUT       ĞÂÉú³ÉµÄSM2¹«Ô¿£¬DER±àÂë
- * piDerPublicKeyLen    OUT       ĞÂÉú³ÉµÄSM2¹«Ô¿³¤¶È
- * pucPrivateKey_Lmk    OUT       LMKÏÂ¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ
- * piPrivateKeyLen_Lmk  OUT       LMKÏÂ¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ³¤¶È
+ * HSM_SM2_GenerateNewKeyPair, äº§ç”Ÿä¸€å¯¹æ–°çš„SM2å¯†é’¥å¯¹
+ * iKeyIndex            IN        è¦äº§ç”Ÿçš„SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä¸å­˜å‚¨
+ * pcKeyLabel           IN        SM2å¯†é’¥æ ‡ç­¾ï¼Œä»…å½“iKeyIndex>0ä¸”!=9999æ—¶æœ‰æ•ˆ;
+ * pucDerPublicKey      OUT       æ–°ç”Ÿæˆçš„SM2å…¬é’¥ï¼ŒDERç¼–ç 
+ * piDerPublicKeyLen    OUT       æ–°ç”Ÿæˆçš„SM2å…¬é’¥é•¿åº¦
+ * pucPrivateKey_Lmk    OUT       LMKä¸‹åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡
+ * piPrivateKeyLen_Lmk  OUT       LMKä¸‹åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡é•¿åº¦
  */
 int HSM_SM2_GenerateNewKeyPair(
     void *hSessionHandle,  int iKeyIndex, char *pcKeyLabel,
@@ -50,11 +51,11 @@ int HSM_SM2_GenerateNewKeyPair(
     *p ++ = 'E';
     *p ++ = '7';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIndex, pcKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -74,7 +75,7 @@ int HSM_SM2_GenerateNewKeyPair(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ¹«Ô¿, nB ***/
+    /*** å…¬é’¥, nB ***/
     len = Tools_GetFieldDerBufLength(p);
     if(piDerPublicKeyLen)
     {
@@ -86,7 +87,7 @@ int HSM_SM2_GenerateNewKeyPair(
     }
     p += len;
 
-    /*** Ë½Ô¿³¤¶È, 4N ***/
+    /*** ç§é’¥é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     if (piPrivateKeyLen_Lmk)
     {
@@ -94,7 +95,7 @@ int HSM_SM2_GenerateNewKeyPair(
     }
     p += 4;
 
-    /*** LMK¼ÓÃÜµÄË½Ô¿Êı¾İ, nB ***/
+    /*** LMKåŠ å¯†çš„ç§é’¥æ•°æ®, nB ***/
     if (pucPrivateKey_Lmk)
     {
         memcpy(pucPrivateKey_Lmk, p, len);
@@ -104,13 +105,13 @@ int HSM_SM2_GenerateNewKeyPair(
 }
 
 /*
- * HSM_SM2_LoadKeyPair, ×°ÔØÒ»¶ÔSM2ÃÜÔ¿¶Ôµ½ÃÜÂë»úÄÚ´æ´¢
- * iKeyIndex            IN        Òªµ¼ÈëµÄSM2ÃÜÔ¿Ë÷Òı
- * pcKeyLabel           IN        Òªµ¼ÈëµÄSM2ÃÜÔ¿±êÇ©
- * pucDerPublicKey      IN        Òªµ¼ÈëµÄSM2¹«Ô¿£¬DER±àÂë
- * piDerPublicKeyLen    IN        Òªµ¼ÈëµÄSM2¹«Ô¿³¤¶È
- * pucPrivateKey_Lmk    IN        LMKÏÂ¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ
- * piPrivateKeyLen_Lmk  IN        LMKÏÂ¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ³¤¶È
+ * HSM_SM2_LoadKeyPair, è£…è½½ä¸€å¯¹SM2å¯†é’¥å¯¹åˆ°å¯†ç æœºå†…å­˜å‚¨
+ * iKeyIndex            IN        è¦å¯¼å…¥çš„SM2å¯†é’¥ç´¢å¼•
+ * pcKeyLabel           IN        è¦å¯¼å…¥çš„SM2å¯†é’¥æ ‡ç­¾
+ * pucDerPublicKey      IN        è¦å¯¼å…¥çš„SM2å…¬é’¥ï¼ŒDERç¼–ç 
+ * piDerPublicKeyLen    IN        è¦å¯¼å…¥çš„SM2å…¬é’¥é•¿åº¦
+ * pucPrivateKey_Lmk    IN        LMKä¸‹åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡
+ * piPrivateKeyLen_Lmk  IN        LMKä¸‹åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡é•¿åº¦
  */
 int HSM_SM2_LoadKeyPair(
     int iKeyIndex, char *pcKeyLabel,
@@ -130,27 +131,27 @@ int HSM_SM2_LoadKeyPair(
     *p ++ = 'E';
     *p ++ = '1';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ¹«Ô¿, nB ***/
+    /*** å…¬é’¥, nB ***/
     memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
     p += iDerPublicKeyLen;
 
-    /*** Ë½Ô¿³¤¶È, 4N ***/
+    /*** ç§é’¥é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
     p += 4;
 
-    /*** LMK¼ÓÃÜµÄË½Ô¿Êı¾İ, nB ***/
+    /*** LMKåŠ å¯†çš„ç§é’¥æ•°æ®, nB ***/
     memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
     p += iPrivateKeyLen_Lmk;
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iKeyIndex);
     p += 4;
 
-    /*** ±êÇ©³¤¶È, 2N ***/
+    /*** æ ‡ç­¾é•¿åº¦, 2N ***/
     if (!pcKeyLabel)
     {
         len = 0;
@@ -163,12 +164,12 @@ int HSM_SM2_LoadKeyPair(
     TASS_SPRINTF((char*)p, 3, "%02d", len);
     p += 2;
 
-    /*** ±êÇ©, 0-16A ***/
+    /*** æ ‡ç­¾, 0-16A ***/
     memcpy(p, pcKeyLabel, len);
     p += len;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -178,10 +179,10 @@ int HSM_SM2_LoadKeyPair(
 }
 
 /*
- * HSM_SM2_GetPublicKey, »ñÈ¡Ò»¶ÔSM2ÃÜÔ¿µÄ¹«Ô¿
- * iKeyIndex            IN        Òªµ¼³ö¹«Ô¿µÄSM2ÃÜÔ¿Ë÷Òı
- * pucDerPublicKey      OUT       µ¼³öµÄSM2¹«Ô¿£¬DER±àÂë
- * piDerPublicKeyLen    OUT       µ¼³öµÄSM2¹«Ô¿³¤¶È
+ * HSM_SM2_GetPublicKey, è·å–ä¸€å¯¹SM2å¯†é’¥çš„å…¬é’¥
+ * iKeyIndex            IN        è¦å¯¼å‡ºå…¬é’¥çš„SM2å¯†é’¥ç´¢å¼•
+ * pucDerPublicKey      OUT       å¯¼å‡ºçš„SM2å…¬é’¥ï¼ŒDERç¼–ç 
+ * piDerPublicKeyLen    OUT       å¯¼å‡ºçš„SM2å…¬é’¥é•¿åº¦
  */
 int HSM_SM2_GetPublicKey( int iKeyIndex, unsigned char *pucDerPublicKey/*out*/, int *piDerPublicKeyLen/*out*/ )
 {
@@ -198,12 +199,12 @@ int HSM_SM2_GetPublicKey( int iKeyIndex, unsigned char *pucDerPublicKey/*out*/, 
     *p ++ = 'E';
     *p ++ = '2';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     TASS_SPRINTF((char*)p, 6, "K%04d", iKeyIndex);
     p += 5;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -213,7 +214,7 @@ int HSM_SM2_GetPublicKey( int iKeyIndex, unsigned char *pucDerPublicKey/*out*/, 
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ¹«Ô¿, nB ***/
+    /*** å…¬é’¥, nB ***/
     len = Tools_GetFieldDerBufLength(p);
     if (piDerPublicKeyLen)
     {
@@ -228,14 +229,14 @@ int HSM_SM2_GetPublicKey( int iKeyIndex, unsigned char *pucDerPublicKey/*out*/, 
 }
 
 /*
- * HSM_SM2_EncryptData, SM2¹«Ô¿¼ÓÃÜÊı¾İ
- * iKeyIndex            IN        SM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö2¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey      IN        DER±àÂëµÄSM2¹«Ô¿£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen     IN        DER±àÂëµÄSM2¹«Ô¿³¤¶È£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * pucInput             IN        Òª¼ÓÃÜµÄÊäÈëÊı¾İ£¬×î¶àÖ§³Ö136×Ö½ÚµÄ¼ÓÃÜÔËËã
- * iInputLength         IN        Òª¼ÓÃÜµÄÊäÈëÊı¾İ³¤¶È£¬×î´ó136
- * pucOutput            OUT       ¼ÓÃÜºóµÄÊä³öÊı¾İ
- * piOutputLength       OUT       ¼ÓÃÜºóµÄÊä³öÊı¾İ³¤¶È
+ * HSM_SM2_EncryptData, SM2å…¬é’¥åŠ å¯†æ•°æ®
+ * iKeyIndex            IN        SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey      IN        DERç¼–ç çš„SM2å…¬é’¥ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen     IN        DERç¼–ç çš„SM2å…¬é’¥é•¿åº¦ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput             IN        è¦åŠ å¯†çš„è¾“å…¥æ•°æ®ï¼Œæœ€å¤šæ”¯æŒ136å­—èŠ‚çš„åŠ å¯†è¿ç®—
+ * iInputLength         IN        è¦åŠ å¯†çš„è¾“å…¥æ•°æ®é•¿åº¦ï¼Œæœ€å¤§136
+ * pucOutput            OUT       åŠ å¯†åçš„è¾“å‡ºæ•°æ®
+ * piOutputLength       OUT       åŠ å¯†åçš„è¾“å‡ºæ•°æ®é•¿åº¦
  */
 int HSM_SM2_EncryptData(void *hSessionHandle,
     int iKeyIndex, unsigned char *pucDerPublicKey, int iDerPublicKeyLen,
@@ -261,22 +262,22 @@ int HSM_SM2_EncryptData(void *hSessionHandle,
     *p ++ = 'E';
     *p ++ = '3';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -285,14 +286,14 @@ int HSM_SM2_EncryptData(void *hSessionHandle,
     TASS_SPRINTF((char*)p, 6, "K%04d", iKeyIndex);
     p += 5;
 
-    /*** ¹«Ô¿DER±àÂë ***/
+    /*** å…¬é’¥DERç¼–ç  ***/
     if (iKeyIndex == 9999)
     {
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
     }
 
-    /*** ÃÜÎÄ±àÂë¸ñÊ½, 1N, 0 ¨C ÃÜÎÄ´®£¨hash¡¢ÃÜÎÄĞòÁĞ ***/
+    /*** å¯†æ–‡ç¼–ç æ ¼å¼, 1N, 0 â€“ å¯†æ–‡ä¸²ï¼ˆhashã€å¯†æ–‡åºåˆ— ***/
     *p ++ = '0';
 
     iCmdLen = (int)(p - aucCmd);
@@ -306,7 +307,7 @@ int HSM_SM2_EncryptData(void *hSessionHandle,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÎÄ³¤¶È, 4N ***/
+    /*** å¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piOutputLength)
@@ -314,7 +315,7 @@ int HSM_SM2_EncryptData(void *hSessionHandle,
         *piOutputLength = len;
     }
 
-    /*** ÃÜÎÄÊı¾İ, nB ***/
+    /*** å¯†æ–‡æ•°æ®, nB ***/
     if(pucOutput)
     {
         memcpy(pucOutput, p, len);
@@ -324,14 +325,14 @@ int HSM_SM2_EncryptData(void *hSessionHandle,
 }
 
 /*
- * HSM_SM2_DecryptData, SM2Ë½Ô¿½âÃÜÊı¾İ
- * iKeyIndex            IN        SM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö2¸ö²ÎÊıÓĞĞ§
- * pucPrivateKey_Lmk    IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk   IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucInput             IN        Òª½âÃÜµÄÊäÈëÊı¾İ
- * iInputLength         IN        Òª½âÃÜµÄÊäÈëÊı¾İ³¤¶È
- * pucOutput            OUT       ½âÃÜºóµÄÊä³öÊı¾İ
- * piOutputLength       OUT       ½âÃÜºóµÄÊä³öÊı¾İ³¤¶È
+ * HSM_SM2_DecryptData, SM2ç§é’¥è§£å¯†æ•°æ®
+ * iKeyIndex            IN        SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucPrivateKey_Lmk    IN        LMKåŠ å¯†çš„SM2ç§é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk   IN        LMKåŠ å¯†çš„SM2ç§é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput             IN        è¦è§£å¯†çš„è¾“å…¥æ•°æ®
+ * iInputLength         IN        è¦è§£å¯†çš„è¾“å…¥æ•°æ®é•¿åº¦
+ * pucOutput            OUT       è§£å¯†åçš„è¾“å‡ºæ•°æ®
+ * piOutputLength       OUT       è§£å¯†åçš„è¾“å‡ºæ•°æ®é•¿åº¦
  */
 int HSM_SM2_DecryptData(void *hSessionHandle,
     int iKeyIndex, unsigned char *pucPrivateKey_Lmk, int iPrivateKeyLen_Lmk,
@@ -357,25 +358,25 @@ int HSM_SM2_DecryptData(void *hSessionHandle,
     *p ++ = 'E';
     *p ++ = '4';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÃÜÎÄ±àÂë¸ñÊ½, 1N, 0 ¨C ÃÜÎÄ´®£¨hash¡¢ÃÜÎÄĞòÁĞ£© ***/
+    /*** å¯†æ–‡ç¼–ç æ ¼å¼, 1N, 0 â€“ å¯†æ–‡ä¸²ï¼ˆhashã€å¯†æ–‡åºåˆ—ï¼‰ ***/
     *p ++ = '0';
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -386,17 +387,17 @@ int HSM_SM2_DecryptData(void *hSessionHandle,
 
     if(iKeyIndex == 9999)
     {
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
-    iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm_ex(hSessionHandle,aucCmd, iCmdLen, aucRsp, &iRspLen);
+    iCmdLen = (int)(p - aucCmd);    
+    rv = TCP_CommunicateHsm_ex(hSessionHandle,aucCmd, iCmdLen, aucRsp, &iRspLen);  
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -406,7 +407,7 @@ int HSM_SM2_DecryptData(void *hSessionHandle,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Êä³öÊı¾İ³¤¶È, 4N ***/
+    /*** è¾“å‡ºæ•°æ®é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piOutputLength)
@@ -414,7 +415,7 @@ int HSM_SM2_DecryptData(void *hSessionHandle,
         *piOutputLength = len;
     }
 
-    /*** Êä³öÊı¾İ, nB ***/
+    /*** è¾“å‡ºæ•°æ®, nB ***/
     if(pucOutput)
     {
         memcpy(pucOutput, p, len);
@@ -424,18 +425,18 @@ int HSM_SM2_DecryptData(void *hSessionHandle,
 }
 
 /*
- * HSM_SM2_GenerateSignature, SM2Ë½Ô¿¶ÔÊı¾İ½øĞĞÊı×ÖÇ©Ãû
- * iKeyIndex            IN        SM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö4¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey      IN        DER±àÂëµÄSM2¹«Ô¿£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen     IN        DER±àÂëµÄSM2¹«Ô¿³¤¶È£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * pucPrivateKey_Lmk    IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk   IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucUserId            IN        ÓÃ»§±êÊ¶
- * iUserIdLength        IN        ÓÃ»§±êÊ¶³¤¶È
- * pucInput             IN        ´ıÇ©ÃûµÄÊäÈëÊı¾İ
- * iInputLength         IN        ´ıÇ©ÃûµÄÊäÈëÊı¾İ³¤¶È
- * pucSignature         OUT       Êä³öµÄÊı¾İÇ©Ãû
- * piSignatureLength    OUT       Êä³öµÄÊı¾İÇ©Ãû³¤¶È
+ * HSM_SM2_GenerateSignature, SM2ç§é’¥å¯¹æ•°æ®è¿›è¡Œæ•°å­—ç­¾å
+ * iKeyIndex            IN        SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°4ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey      IN        DERç¼–ç çš„SM2å…¬é’¥ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen     IN        DERç¼–ç çš„SM2å…¬é’¥é•¿åº¦ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucPrivateKey_Lmk    IN        LMKåŠ å¯†çš„SM2ç§é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk   IN        LMKåŠ å¯†çš„SM2ç§é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucUserId            IN        ç”¨æˆ·æ ‡è¯†
+ * iUserIdLength        IN        ç”¨æˆ·æ ‡è¯†é•¿åº¦
+ * pucInput             IN        å¾…ç­¾åçš„è¾“å…¥æ•°æ®
+ * iInputLength         IN        å¾…ç­¾åçš„è¾“å…¥æ•°æ®é•¿åº¦
+ * pucSignature         OUT       è¾“å‡ºçš„æ•°æ®ç­¾å
+ * piSignatureLength    OUT       è¾“å‡ºçš„æ•°æ®ç­¾åé•¿åº¦
  */
 int HSM_SM2_GenerateSignature(
     int iKeyIndex,
@@ -463,37 +464,37 @@ int HSM_SM2_GenerateSignature(
     *p ++ = 'E';
     *p ++ = '5';
 
-    /*** HASHËã·¨±êÊ¶, 2N, 20 ¨C SM3 ***/
+    /*** HASHç®—æ³•æ ‡è¯†, 2N, 20 â€“ SM3 ***/
     *p ++ = '2';
     *p ++ = '0';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÓÃ»§±êÊ¶³¤¶È, 4N ***/
+    /*** ç”¨æˆ·æ ‡è¯†é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iUserIdLength);
     p += 4;
 
-    /*** ÓÃ»§±êÊ¶, nB ***/
+    /*** ç”¨æˆ·æ ‡è¯†, nB ***/
     memcpy(p, pucUserId, iUserIdLength);
     p += iUserIdLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -504,24 +505,24 @@ int HSM_SM2_GenerateSignature(
 
     if(iKeyIndex == 9999)
     {
-        /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
 
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
-    /*** Ç©Ãû±àÂë¸ñÊ½, 1N, 0 ¨C Ç©ÃûÖµÊı¾İ´®£¨r¡¢sĞòÁĞ£© ***/
+    /*** ç­¾åç¼–ç æ ¼å¼, 1N, 0 â€“ ç­¾åå€¼æ•°æ®ä¸²ï¼ˆrã€såºåˆ—ï¼‰ ***/
     *p ++ = '0';
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -531,7 +532,7 @@ int HSM_SM2_GenerateSignature(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Êı×ÖÇ©Ãû³¤¶È, 4N ***/
+    /*** æ•°å­—ç­¾åé•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piSignatureLength)
@@ -539,7 +540,7 @@ int HSM_SM2_GenerateSignature(
         *piSignatureLength = len;
     }
 
-    /*** Êä³öÊı¾İ, nB ***/
+    /*** è¾“å‡ºæ•°æ®, nB ***/
     if(pucSignature)
     {
         memcpy(pucSignature, p, len);
@@ -572,51 +573,51 @@ int HSM_SM2_VerifySignature(
     *p ++ = 'E';
     *p ++ = '6';
 
-    /*** HASHËã·¨±êÊ¶, 2N, 20 ¨C SM3 ***/
+    /*** HASHç®—æ³•æ ‡è¯†, 2N, 20 â€“ SM3 ***/
     *p ++ = '2';
     *p ++ = '0';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÓÃ»§±êÊ¶³¤¶È, 4N ***/
+    /*** ç”¨æˆ·æ ‡è¯†é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iUserIdLength);
     p += 4;
 
-    /*** ÓÃ»§±êÊ¶, nB ***/
+    /*** ç”¨æˆ·æ ‡è¯†, nB ***/
     memcpy(p, pucUserId, iUserIdLength);
     p += iUserIdLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** Ç©Ãû±àÂë¸ñÊ½, 1N, 0 ¨C Ç©ÃûÖµÊı¾İ´®£¨r¡¢sĞòÁĞ£© ***/
+    /*** ç­¾åç¼–ç æ ¼å¼, 1N, 0 â€“ ç­¾åå€¼æ•°æ®ä¸²ï¼ˆrã€såºåˆ—ï¼‰ ***/
     *p ++ = '0';
 
-    /*** ´ıÑéÇ©µÄÇ©Ãû³¤¶È, 4N ***/
+    /*** å¾…éªŒç­¾çš„ç­¾åé•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iSignatureLength);
     p += 4;
 
-    /*** ´ıÑéÇ©µÄÇ©Ãû, nB ***/
+    /*** å¾…éªŒç­¾çš„ç­¾å, nB ***/
     memcpy(p, pucSignature, iSignatureLength);
     p += iSignatureLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -627,13 +628,13 @@ int HSM_SM2_VerifySignature(
 
     if(iKeyIndex == 9999)
     {
-        /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -643,20 +644,20 @@ int HSM_SM2_VerifySignature(
 }
 
 /*
- * HSM_SM2_ExportByTK, ´«ÊäÃÜÔ¿£¨KEK/MDK£¬¿É·ÖÉ¢¿É²»·ÖÉ¢£©±£»¤µ¼³öÒ»¶ÔSM2ÃÜÔ¿¶Ô
- * iMode                IN        0¨CECB, 1¨CCBC
- * pcTkType             IN        "000"¨CKEK;  "109"¨CMDK;
- * iTkIndex             IN        <=0, Ê¹ÓÃpcTk_Lmk²ÎÊı£»·ñÔòÊ¹ÓÃË÷ÒıÖ¸¶¨µÄÃÜÔ¿
- * pcTk_Lmk             IN        µ±iTkIndex<=0Ê±ÓĞĞ§
- * iTkDeriveNumber      IN        ±£»¤ÃÜÔ¿µÄ·ÖÉ¢¼¶Êı
- * pcTkDeriveData       IN        ±£»¤ÃÜÔ¿µÄ·ÖÉ¢Òò×Ó£¬Ã¿¼¶32H
- * iSm2KeyIndex         IN        Òª±»µ¼³öµÄSM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö4¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey      IN        DER±àÂëµÄSM2¹«Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen     IN        DER±àÂëµÄSM2¹«Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucPrivateKey_Lmk    IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk   IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucPrivateKey_Tk     OUT       ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ
- * piPrivateKeyLen_Tk   OUT       ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ³¤¶È
+ * HSM_SM2_ExportByTK, ä¼ è¾“å¯†é’¥ï¼ˆKEK/MDKï¼Œå¯åˆ†æ•£å¯ä¸åˆ†æ•£ï¼‰ä¿æŠ¤å¯¼å‡ºä¸€å¯¹SM2å¯†é’¥å¯¹
+ * iMode                IN        0â€“ECB, 1â€“CBC
+ * pcTkType             IN        "000"â€“KEK;  "109"â€“MDK;
+ * iTkIndex             IN        <=0, ä½¿ç”¨pcTk_Lmkå‚æ•°ï¼›å¦åˆ™ä½¿ç”¨ç´¢å¼•æŒ‡å®šçš„å¯†é’¥
+ * pcTk_Lmk             IN        å½“iTkIndex<=0æ—¶æœ‰æ•ˆ
+ * iTkDeriveNumber      IN        ä¿æŠ¤å¯†é’¥çš„åˆ†æ•£çº§æ•°
+ * pcTkDeriveData       IN        ä¿æŠ¤å¯†é’¥çš„åˆ†æ•£å› å­ï¼Œæ¯çº§32H
+ * iSm2KeyIndex         IN        è¦è¢«å¯¼å‡ºçš„SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°4ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey      IN        DERç¼–ç çš„SM2å…¬é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen     IN        DERç¼–ç çš„SM2å…¬é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucPrivateKey_Lmk    IN        LMKåŠ å¯†çš„SM2ç§é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk   IN        LMKåŠ å¯†çš„SM2ç§é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucPrivateKey_Tk     OUT       ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡
+ * piPrivateKeyLen_Tk   OUT       ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡é•¿åº¦
  */
 int HSM_SM2_ExportByTK(
     void *hSessionHandle,
@@ -680,15 +681,15 @@ int HSM_SM2_ExportByTK(
     *p ++ = 'T';
     *p ++ = 'T';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½, 2N, 00 ¨C ECB, 01 ¨C CBC ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼, 2N, 00 â€“ ECB, 01 â€“ CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ±£»¤ÃÜÔ¿ÀàĞÍ, 3H, "000"¨CKEK;  "109"¨CMDK ***/
+    /*** ä¿æŠ¤å¯†é’¥ç±»å‹, 3H, "000"â€“KEK;  "109"â€“MDK ***/
     memcpy(p, pcTkType, 3);
     p += 3;
 
-    /*** ±£»¤ÃÜÔ¿ ***/
+    /*** ä¿æŠ¤å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iTkIndex, pcTk_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -697,7 +698,7 @@ int HSM_SM2_ExportByTK(
     }
     p += rv;
 
-    /*** ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iTkDeriveNumber, pcTkDeriveData, (char*)p);
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -706,11 +707,11 @@ int HSM_SM2_ExportByTK(
     }
     p += rv;
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if(iSm2KeyIndex <= 0)
     {
         iSm2KeyIndex = 9999;
@@ -721,15 +722,15 @@ int HSM_SM2_ExportByTK(
 
     if(iSm2KeyIndex == 9999)
     {
-        /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
 
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
@@ -745,11 +746,11 @@ int HSM_SM2_ExportByTK(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ¹«Ô¿£¬ ASN.1 ¸ñÊ½DER ±àÂë, nB ***/
+    /*** å…¬é’¥ï¼Œ ASN.1 æ ¼å¼DER ç¼–ç , nB ***/
     len = Tools_GetFieldDerBufLength(p);
     p += len;
 
-    /*** ´«ÊäÃÜÔ¿¼ÓÃÜµÄË½Ô¿·ÖÁ¿dÃÜÎÄ³¤¶È, 4N ***/
+    /*** ä¼ è¾“å¯†é’¥åŠ å¯†çš„ç§é’¥åˆ†é‡då¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKeyLen_Tk)
@@ -757,7 +758,7 @@ int HSM_SM2_ExportByTK(
         *piPrivateKeyLen_Tk = len;
     }
 
-    /*** ´«ÊäÃÜÔ¿¼ÓÃÜµÄË½Ô¿·ÖÁ¿dÃÜÎÄ, nB ***/
+    /*** ä¼ è¾“å¯†é’¥åŠ å¯†çš„ç§é’¥åˆ†é‡då¯†æ–‡, nB ***/
     if(pucPrivateKey_Tk)
     {
         memcpy(pucPrivateKey_Tk, p, len);
@@ -767,20 +768,20 @@ int HSM_SM2_ExportByTK(
 }
 
 /*
- * HSM_SM2_ImportByTK, ´«ÊäÃÜÔ¿£¨KEK/MDK£¬¿É·ÖÉ¢¿É²»·ÖÉ¢£©±£»¤µ¼ÈëÒ»¶ÔSM2ÃÜÔ¿¶Ô
- * iMode                   IN        0¨CECB, 1¨CCBC
- * pcTkType                IN        "000"¨CKEK;  "109"¨CMDK;
- * iTkIndex                IN        <=0, Ê¹ÓÃpcTk_Lmk²ÎÊı£»·ñÔòÊ¹ÓÃË÷ÒıÖ¸¶¨µÄÃÜÔ¿
- * pcTk_Lmk                IN        µ±iTkIndex<=0Ê±ÓĞĞ§
- * iTkDeriveNumber         IN        ±£»¤ÃÜÔ¿µÄ·ÖÉ¢¼¶Êı
- * pcTkDeriveData          IN        ±£»¤ÃÜÔ¿µÄ·ÖÉ¢Òò×Ó£¬Ã¿¼¶32H
- * iSm2KeyIndex            IN        Òª±»µ¼³öµÄSM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö4¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey         IN        DER±àÂëµÄSM2¹«Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen        IN        DER±àÂëµÄSM2¹«Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucPrivateKey_Lmk       IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk      IN        LMK¼ÓÃÜµÄSM2Ë½Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucPrivateKey_Tk        OUT       ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ
- * piPrivateKeyLen_Tk      OUT       ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿ÃÜÎÄ³¤¶È
+ * HSM_SM2_ImportByTK, ä¼ è¾“å¯†é’¥ï¼ˆKEK/MDKï¼Œå¯åˆ†æ•£å¯ä¸åˆ†æ•£ï¼‰ä¿æŠ¤å¯¼å…¥ä¸€å¯¹SM2å¯†é’¥å¯¹
+ * iMode                   IN        0â€“ECB, 1â€“CBC
+ * pcTkType                IN        "000"â€“KEK;  "109"â€“MDK;
+ * iTkIndex                IN        <=0, ä½¿ç”¨pcTk_Lmkå‚æ•°ï¼›å¦åˆ™ä½¿ç”¨ç´¢å¼•æŒ‡å®šçš„å¯†é’¥
+ * pcTk_Lmk                IN        å½“iTkIndex<=0æ—¶æœ‰æ•ˆ
+ * iTkDeriveNumber         IN        ä¿æŠ¤å¯†é’¥çš„åˆ†æ•£çº§æ•°
+ * pcTkDeriveData          IN        ä¿æŠ¤å¯†é’¥çš„åˆ†æ•£å› å­ï¼Œæ¯çº§32H
+ * iSm2KeyIndex            IN        è¦è¢«å¯¼å‡ºçš„SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°4ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey         IN        DERç¼–ç çš„SM2å…¬é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen        IN        DERç¼–ç çš„SM2å…¬é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucPrivateKey_Lmk       IN        LMKåŠ å¯†çš„SM2ç§é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk      IN        LMKåŠ å¯†çš„SM2ç§é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucPrivateKey_Tk        OUT       ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡
+ * piPrivateKeyLen_Tk      OUT       ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥å¯†æ–‡é•¿åº¦
  */
 int HSM_SM2_ImportByTK(
     int iMode, char *pcTkType,
@@ -803,15 +804,15 @@ int HSM_SM2_ImportByTK(
     *p ++ = 'T';
     *p ++ = 'U';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½, 2N, 00 ¨C ECB, 01 ¨C CBC ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼, 2N, 00 â€“ ECB, 01 â€“ CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ±£»¤ÃÜÔ¿ÀàĞÍ, 3H, "000"¨CKEK;  "109"¨CMDK ***/
+    /*** ä¿æŠ¤å¯†é’¥ç±»å‹, 3H, "000"â€“KEK;  "109"â€“MDK ***/
     memcpy(p, pcTkType, 3);
     p += 3;
 
-    /*** ±£»¤ÃÜÔ¿ ***/
+    /*** ä¿æŠ¤å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iTkIndex, pcTk_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -820,7 +821,7 @@ int HSM_SM2_ImportByTK(
     }
     p += rv;
 
-    /*** ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iTkDeriveNumber, pcTkDeriveData, p);
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -829,11 +830,11 @@ int HSM_SM2_ImportByTK(
     }
     p += rv;
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if (iSm2KeyIndex <= 0)
     {
         iSm2KeyIndex = 9999;
@@ -842,21 +843,21 @@ int HSM_SM2_ImportByTK(
     TASS_SPRINTF((char*)p, 5, "%04d", iSm2KeyIndex);
     p += 4;
 
-    /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+    /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
     memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
     p += iDerPublicKeyLen;
 
-    /*** ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿·ÖÁ¿dÃÜÎÄ³¤¶È, 4N ***/
+    /*** ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥åˆ†é‡då¯†æ–‡é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Tk);
     p += 4;
 
-    /*** ±£»¤ÃÜÔ¿¼ÓÃÜµÄSM2Ë½Ô¿·ÖÁ¿dÃÜÎÄ, nB ***/
+    /*** ä¿æŠ¤å¯†é’¥åŠ å¯†çš„SM2ç§é’¥åˆ†é‡då¯†æ–‡, nB ***/
     memcpy(p, pucPrivateKey_Tk, iPrivateKeyLen_Tk);
     p += iPrivateKeyLen_Tk;
 
     if(iSm2KeyIndex != 9999)
     {
-        /*** ±êÇ©³¤¶È£¬2N ***/
+        /*** æ ‡ç­¾é•¿åº¦ï¼Œ2N ***/
         if (!pcSm2KeyLabel)
         {
             len = 0;
@@ -869,13 +870,13 @@ int HSM_SM2_ImportByTK(
         TASS_SPRINTF((char*)p, 3, "%02d", len);
         p += 2;
 
-        /*** ÃÜÔ¿±êÇ©£¬nA ***/
+        /*** å¯†é’¥æ ‡ç­¾ï¼ŒnA ***/
         memcpy(p, pcSm2KeyLabel, len);
         p += len;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -885,7 +886,7 @@ int HSM_SM2_ImportByTK(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** LMK¼ÓÃÜµÄË½Ô¿ÃÜÎÄ³¤¶È, 4N ***/
+    /*** LMKåŠ å¯†çš„ç§é’¥å¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKeyLen_Lmk)
@@ -893,7 +894,7 @@ int HSM_SM2_ImportByTK(
         *piPrivateKeyLen_Lmk = len;
     }
 
-    /*** LMK¼ÓÃÜµÄË½Ô¿ÃÜÎÄ, nB ***/
+    /*** LMKåŠ å¯†çš„ç§é’¥å¯†æ–‡, nB ***/
     if(pucPrivateKey_Lmk)
     {
         memcpy(pucPrivateKey_Lmk, p, len);
@@ -903,13 +904,13 @@ int HSM_SM2_ImportByTK(
 }
 
 /*
- * HSM_SM2_GeneratePublicKeyMac, ÔÚÊÚÈ¨¿ØÖÆÏÂÎªSM2¹«Ô¿²úÉú¹«Ô¿MAC
- * pucDerPublicKey      IN        Òª¼ÆËãMACµÄSM2¹«Ô¿£¬DER±àÂë
- * iDerPublicKeyLen     IN        Òª¼ÆËãMACµÄSM2¹«Ô¿³¤¶È
- * pucAuthData          IN        ¹«Ô¿¼ø±ğÊı¾İ£¬²»ÄÜ´ø';'×Ö·û
- * iAuthDataLen         IN        ¹«Ô¿¼ø±ğÊı¾İ³¤¶È
- * pucMac               OUT       SM2¹«Ô¿µÄMACÖµ
- * piMacLen             OUT       SM2¹«Ô¿µÄMACÖµ³¤¶È
+ * HSM_SM2_GeneratePublicKeyMac, åœ¨æˆæƒæ§åˆ¶ä¸‹ä¸ºSM2å…¬é’¥äº§ç”Ÿå…¬é’¥MAC
+ * pucDerPublicKey      IN        è¦è®¡ç®—MACçš„SM2å…¬é’¥ï¼ŒDERç¼–ç 
+ * iDerPublicKeyLen     IN        è¦è®¡ç®—MACçš„SM2å…¬é’¥é•¿åº¦
+ * pucAuthData          IN        å…¬é’¥é‰´åˆ«æ•°æ®ï¼Œä¸èƒ½å¸¦';'å­—ç¬¦
+ * iAuthDataLen         IN        å…¬é’¥é‰´åˆ«æ•°æ®é•¿åº¦
+ * pucMac               OUT       SM2å…¬é’¥çš„MACå€¼
+ * piMacLen             OUT       SM2å…¬é’¥çš„MACå€¼é•¿åº¦
  */
 int HSM_SM2_GeneratePublicKeyMac(
     unsigned char *pucDerPublicKey, int iDerPublicKeyLen,
@@ -928,20 +929,20 @@ int HSM_SM2_GeneratePublicKeyMac(
     *p ++ = 'T';
     *p ++ = 'Q';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+    /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
     memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
     p += iDerPublicKeyLen;
 
-    /*** ÓÃÓÚ¼ÆËã¹«Ô¿MACµÄ¶îÍâµÄÊı¾İ£¨²»ÄÜ°üº¬×Ö·û¡¯;¡¯£©, nB ***/
+    /*** ç”¨äºè®¡ç®—å…¬é’¥MACçš„é¢å¤–çš„æ•°æ®ï¼ˆä¸èƒ½åŒ…å«å­—ç¬¦â€™;â€™ï¼‰, nB ***/
     memcpy(p, pucAuthData, iAuthDataLen);
     p += iAuthDataLen;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%#010X].", rv);
@@ -951,7 +952,7 @@ int HSM_SM2_GeneratePublicKeyMac(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Ê¹ÓÃLMK·Ö×é¶Ô¹«Ô¿ºÍÈÏÖ¤Êı¾İ¼ÆËãµÄMAC£¬4B ***/
+    /*** ä½¿ç”¨LMKåˆ†ç»„å¯¹å…¬é’¥å’Œè®¤è¯æ•°æ®è®¡ç®—çš„MACï¼Œ4B ***/
     if(piMacLen)
     {
         *piMacLen = 4;
@@ -966,22 +967,22 @@ int HSM_SM2_GeneratePublicKeyMac(
 }
 
 /*
- * HSM_SM2_ExportSymmetricKey, ÓÉSM2¹«Ô¿¼ÓÃÜ±£»¤µ¼³öÒ»Ìõ¶Ô³ÆÃÜÔ¿
- * pcKeyType            IN        ±»µ¼³öÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ£º"000"¨CKEK; 00A¨CDEK; "109"¨CMDK;
- * iKeyIndex            IN        ±»µ¼³öÃÜÔ¿µÄË÷Òı¡£<=0, Ê¹ÓÃpcKey_Lmk²ÎÊı£»·ñÔòÊ¹ÓÃË÷ÒıÖ¸¶¨µÄÃÜÔ¿
- * pcKey_Lmk            IN        LMK¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿µÄÃÜÎÄ¡£µ±iKeyIndex<=0Ê±ÓĞĞ§
- * iKeyDeriveNumber     IN        ±»µ¼³öÃÜÔ¿µÄ·ÖÉ¢¼¶Êı
- * pcKeyDeriveData      IN        ±»µ¼³öÃÜÔ¿µÄ·ÖÉ¢Òò×Ó£¬Ã¿¼¶32H
- * iSm2KeyIndex         IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶Ê¹ÓÃpucDerPublicKey²ÎÊı
- * pucDerPublicKey      IN        ×÷Îª±£»¤ÃÜÔ¿µÄDER±àÂëµÄSM2¹«Ô¿£¬½öµ±iSm2KeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen     IN        ×÷Îª±£»¤ÃÜÔ¿µÄDER±àÂëµÄSM2¹«Ô¿³¤¶È£¬½öµ±iSm2KeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * pucAuthData          IN        ×÷Îª±£»¤ÃÜÔ¿µÄ¹«Ô¿¼ø±ğÊı¾İ£¬²»ÄÜ´ø';'×Ö·û
- * iAuthDataLen         IN        ×÷Îª±£»¤ÃÜÔ¿µÄ¹«Ô¿¼ø±ğÊı¾İ³¤¶È
- * pucMac               IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2¹«Ô¿µÄMACÖµ
- * iMacLen              IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2¹«Ô¿µÄMACÖµ³¤¶È
- * pucCipherKey         OUT       SM2ÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ
- * piCipherKeyLen       OUT       SM2ÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ³¤¶È
- * pcKeyCv              OUT       ±»µ¼³öÃÜÔ¿µÄĞ£ÑéÖµ
+ * HSM_SM2_ExportSymmetricKey, ç”±SM2å…¬é’¥åŠ å¯†ä¿æŠ¤å¯¼å‡ºä¸€æ¡å¯¹ç§°å¯†é’¥
+ * pcKeyType            IN        è¢«å¯¼å‡ºå¯†é’¥çš„å¯†é’¥ç±»å‹ï¼š"000"â€“KEK; 00Aâ€“DEK; "109"â€“MDK;
+ * iKeyIndex            IN        è¢«å¯¼å‡ºå¯†é’¥çš„ç´¢å¼•ã€‚<=0, ä½¿ç”¨pcKey_Lmkå‚æ•°ï¼›å¦åˆ™ä½¿ç”¨ç´¢å¼•æŒ‡å®šçš„å¯†é’¥
+ * pcKey_Lmk            IN        LMKåŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥çš„å¯†æ–‡ã€‚å½“iKeyIndex<=0æ—¶æœ‰æ•ˆ
+ * iKeyDeriveNumber     IN        è¢«å¯¼å‡ºå¯†é’¥çš„åˆ†æ•£çº§æ•°
+ * pcKeyDeriveData      IN        è¢«å¯¼å‡ºå¯†é’¥çš„åˆ†æ•£å› å­ï¼Œæ¯çº§32H
+ * iSm2KeyIndex         IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä½¿ç”¨pucDerPublicKeyå‚æ•°
+ * pucDerPublicKey      IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„DERç¼–ç çš„SM2å…¬é’¥ï¼Œä»…å½“iSm2KeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen     IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„DERç¼–ç çš„SM2å…¬é’¥é•¿åº¦ï¼Œä»…å½“iSm2KeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * pucAuthData          IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„å…¬é’¥é‰´åˆ«æ•°æ®ï¼Œä¸èƒ½å¸¦';'å­—ç¬¦
+ * iAuthDataLen         IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„å…¬é’¥é‰´åˆ«æ•°æ®é•¿åº¦
+ * pucMac               IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2å…¬é’¥çš„MACå€¼
+ * iMacLen              IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2å…¬é’¥çš„MACå€¼é•¿åº¦
+ * pucCipherKey         OUT       SM2å¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡
+ * piCipherKeyLen       OUT       SM2å¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡é•¿åº¦
+ * pcKeyCv              OUT       è¢«å¯¼å‡ºå¯†é’¥çš„æ ¡éªŒå€¼
  */
 int HSM_SM2_ExportSymmetricKey(
     char *pcKeyType, int iKeyIndex, char *pcKey_Lmk,
@@ -1005,15 +1006,15 @@ int HSM_SM2_ExportSymmetricKey(
     *p ++ = 'T';
     *p ++ = 'X';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ±»µ¼³öÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ£º"000"¨CKEK; 00A¨CDEK; "109"¨CMDK; ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥çš„å¯†é’¥ç±»å‹ï¼š"000"â€“KEK; 00Aâ€“DEK; "109"â€“MDK; ***/
     memcpy(p, pcKeyType, 3);
     p += 3;
 
-    /*** ±»µ¼³öÃÜÔ¿ ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIndex, pcKey_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -1022,7 +1023,7 @@ int HSM_SM2_ExportSymmetricKey(
     }
     p += rv;
 
-    /*** ±»µ¼³öÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iKeyDeriveNumber, pcKeyDeriveData, (char*)p);
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -1031,7 +1032,7 @@ int HSM_SM2_ExportSymmetricKey(
     }
     p += rv;
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if(iSm2KeyIndex <= 0)
     {
         iSm2KeyIndex = 9999;
@@ -1042,24 +1043,24 @@ int HSM_SM2_ExportSymmetricKey(
 
     if(iSm2KeyIndex == 9999)
     {
-        /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
 
-        /*** ÓÃÓÚ¼ÆËã¹«Ô¿MACµÄ¶îÍâµÄÊı¾İ£¨²»ÄÜ°üº¬×Ö·û¡¯;¡¯£©, nB ***/
+        /*** ç”¨äºè®¡ç®—å…¬é’¥MACçš„é¢å¤–çš„æ•°æ®ï¼ˆä¸èƒ½åŒ…å«å­—ç¬¦â€™;â€™ï¼‰, nB ***/
         memcpy(p, pucAuthData, iAuthDataLen);
         p += iAuthDataLen;
 
-        /*** ÈÏÖ¤Êı¾İ·Ö¸ô·û,';' ***/
+        /*** è®¤è¯æ•°æ®åˆ†éš”ç¬¦,';' ***/
         *p ++ = ';';
 
-        /*** ¹«Ô¿MAC, 4B ***/
+        /*** å…¬é’¥MAC, 4B ***/
         memcpy(p, pucMac, 4);
         p += 4;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1069,7 +1070,7 @@ int HSM_SM2_ExportSymmetricKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** SM2ÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ³¤¶È, 4N ***/
+    /*** SM2å¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piCipherKeyLen)
@@ -1077,14 +1078,14 @@ int HSM_SM2_ExportSymmetricKey(
         *piCipherKeyLen = len;
     }
 
-    /*** SM2ÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ, nB ***/
+    /*** SM2å¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡, nB ***/
     if(pucCipherKey)
     {
         memcpy(pucCipherKey, p, len);
     }
     p += len;
 
-    /*** ±»µ¼³öÃÜÔ¿µÄĞ£ÑéÖµ  ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥çš„æ ¡éªŒå€¼  ***/
     if(pcKeyCv)
     {
         strncpy(pcKeyCv, (char *)p, 16);
@@ -1094,18 +1095,18 @@ int HSM_SM2_ExportSymmetricKey(
 }
 
 /*
- * HSM_SM2_ImportSymmetricKey, ÓÉSM2¹«Ô¿¼ÓÃÜ±£»¤µ¼ÈëÒ»Ìõ¶Ô³ÆÃÜÔ¿
- * pcKeyType            IN        ±»µ¼ÈëÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ£º"000"¨CKEK; 00A¨CDEK; "109"¨CMDK;
- * cKeyScheme           IN        ±»µ¼ÈëÃÜÔ¿µÄËã·¨±êÊ¶£ºZ/X/Y/U/T/P/L/R
- * iKeyIndex            IN        ±»µ¼ÈëÃÜÔ¿µÄË÷Òı¡£<=0, ±êÊ¶ÃÜÔ¿²»´æ´¢µ½ÄÚ²¿
- * pcKeyLabel           IN        ±»µ¼ÈëÃÜÔ¿µÄ±êÇ©¡£µ±iKeyIndex>0Ê±ÓĞĞ§
- * iSm2KeyIndex         IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2ÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶Ê¹ÓÃpucPrivateKey_Lmk²ÎÊı
- * pucPrivateKey_Lmk    IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2Ë½Ô¿ÃÜÎÄ£¬½öµ±iSm2KeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk   IN        ×÷Îª±£»¤ÃÜÔ¿µÄSM2Ë½Ô¿ÃÜÎÄ³¤¶È£¬½öµ±iSm2KeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * pucCipherKey         IN        SM2¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ
- * iCipherKeyLen        IN        SM2¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ³¤¶È
- * pcKey_Lmk            OUT       LMKÏÂ¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ
- * pcKeyCv              OUT       ±»µ¼ÈëÃÜÔ¿µÄĞ£ÑéÖµ
+ * HSM_SM2_ImportSymmetricKey, ç”±SM2å…¬é’¥åŠ å¯†ä¿æŠ¤å¯¼å…¥ä¸€æ¡å¯¹ç§°å¯†é’¥
+ * pcKeyType            IN        è¢«å¯¼å…¥å¯†é’¥çš„å¯†é’¥ç±»å‹ï¼š"000"â€“KEK; 00Aâ€“DEK; "109"â€“MDK;
+ * cKeyScheme           IN        è¢«å¯¼å…¥å¯†é’¥çš„ç®—æ³•æ ‡è¯†ï¼šZ/X/Y/U/T/P/L/R
+ * iKeyIndex            IN        è¢«å¯¼å…¥å¯†é’¥çš„ç´¢å¼•ã€‚<=0, æ ‡è¯†å¯†é’¥ä¸å­˜å‚¨åˆ°å†…éƒ¨
+ * pcKeyLabel           IN        è¢«å¯¼å…¥å¯†é’¥çš„æ ‡ç­¾ã€‚å½“iKeyIndex>0æ—¶æœ‰æ•ˆ
+ * iSm2KeyIndex         IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2å¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä½¿ç”¨pucPrivateKey_Lmkå‚æ•°
+ * pucPrivateKey_Lmk    IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2ç§é’¥å¯†æ–‡ï¼Œä»…å½“iSm2KeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk   IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„SM2ç§é’¥å¯†æ–‡é•¿åº¦ï¼Œä»…å½“iSm2KeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * pucCipherKey         IN        SM2å…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡
+ * iCipherKeyLen        IN        SM2å…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡é•¿åº¦
+ * pcKey_Lmk            OUT       LMKä¸‹åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡
+ * pcKeyCv              OUT       è¢«å¯¼å…¥å¯†é’¥çš„æ ¡éªŒå€¼
  */
 int HSM_SM2_ImportSymmetricKey(
     char *pcKeyType, char cKeyScheme,
@@ -1127,18 +1128,18 @@ int HSM_SM2_ImportSymmetricKey(
     *p ++ = 'T';
     *p ++ = 'Y';
 
-    /*** ÇúÏß±êÊ¶, 2N, 07-¹úÃÜ-256ĞÂÇúÏß£¬SM2 ***/
+    /*** æ›²çº¿æ ‡è¯†, 2N, 07-å›½å¯†-256æ–°æ›²çº¿ï¼ŒSM2 ***/
     *p ++ = '0';
     *p ++ = '7';
 
-    /*** ±»µ¼ÈëÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ£º"000"¨CKEK; 00A¨CDEK; "109"¨CMDK; ***/
+    /*** è¢«å¯¼å…¥å¯†é’¥çš„å¯†é’¥ç±»å‹ï¼š"000"â€“KEK; 00Aâ€“DEK; "109"â€“MDK; ***/
     memcpy(p, pcKeyType, 3);
     p += 3;
 
-    /*** ±»µ¼ÈëÃÜÔ¿µÄËã·¨±êÊ¶£ºZ/X/Y/U/T/P/L/R ***/
+    /*** è¢«å¯¼å…¥å¯†é’¥çš„ç®—æ³•æ ‡è¯†ï¼šZ/X/Y/U/T/P/L/R ***/
     *p ++ = cKeyScheme;
 
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIndex, pcKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1147,19 +1148,19 @@ int HSM_SM2_ImportSymmetricKey(
     }
     p += rv;
 
-    /*** µ¼ÈëÃÜÔ¿µÄĞ£ÑéÖµ, 16H, È«0Ôò²»Ğ£Ñé£¬Ö±½ÓÍê³Éµ¼Èë¹¤×÷£» ***/
+    /*** å¯¼å…¥å¯†é’¥çš„æ ¡éªŒå€¼, 16H, å…¨0åˆ™ä¸æ ¡éªŒï¼Œç›´æ¥å®Œæˆå¯¼å…¥å·¥ä½œï¼› ***/
     memset(p, '0', 16);
     p += 16;
 
-    /*** SM2¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ³¤¶È, 4H ***/
+    /*** SM2å…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡é•¿åº¦, 4H ***/
     TASS_SPRINTF((char*)p, 5, "%04X", iCipherKeyLen);
     p += 4;
 
-    /*** SM2¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ, nB ***/
+    /*** SM2å…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡, nB ***/
     memcpy(p, pucCipherKey, iCipherKeyLen);
     p += iCipherKeyLen;
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if(iSm2KeyIndex <= 0)
     {
         iSm2KeyIndex = 9999;
@@ -1170,17 +1171,17 @@ int HSM_SM2_ImportSymmetricKey(
 
     if(iSm2KeyIndex == 9999)
     {
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1190,7 +1191,7 @@ int HSM_SM2_ImportSymmetricKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** LMKÏÂ¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ ***/
+    /*** LMKä¸‹åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡ ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if(pcKey_Lmk)
     {
@@ -1198,7 +1199,7 @@ int HSM_SM2_ImportSymmetricKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if(pcKeyCv)
     {
         strncpy(pcKeyCv, (char *)p, 16);
@@ -1208,15 +1209,15 @@ int HSM_SM2_ImportSymmetricKey(
 }
 
 /*
- * HSM_RSA_GenerateNewKeyPair, ²úÉúÒ»¶ÔĞÂµÄRSAÃÜÔ¿¶Ô
- * iKeyIndex            IN        Òª²úÉúµÄRSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶²»´æ´¢
- * pcKeyLabel           IN        RSAÃÜÔ¿±êÇ©£¬½öµ±iKeyIndex>0ÇÒ!=9999Ê±ÓĞĞ§;
- * iModulusBits         IN        RSAÃÜÔ¿Ä£³¤£¬Î»Êı
- * iPubE                IN        RSA¹«Ô¿Ö¸ÊıE£¬3»ò65537
- * pucDerPublicKey      OUT       ĞÂÉú³ÉµÄRSA¹«Ô¿£¬DER±àÂë
- * piDerPublicKeyLen    OUT       ĞÂÉú³ÉµÄRSA¹«Ô¿³¤¶È
- * pucPrivateKey_Lmk    OUT       LMKÏÂ¼ÓÃÜµÄRSAË½Ô¿ÃÜÎÄ
- * piPrivateKeyLen_Lmk  OUT       LMKÏÂ¼ÓÃÜµÄRSAË½Ô¿ÃÜÎÄ³¤¶È
+ * HSM_RSA_GenerateNewKeyPair, äº§ç”Ÿä¸€å¯¹æ–°çš„RSAå¯†é’¥å¯¹
+ * iKeyIndex            IN        è¦äº§ç”Ÿçš„RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä¸å­˜å‚¨
+ * pcKeyLabel           IN        RSAå¯†é’¥æ ‡ç­¾ï¼Œä»…å½“iKeyIndex>0ä¸”!=9999æ—¶æœ‰æ•ˆ;
+ * iModulusBits         IN        RSAå¯†é’¥æ¨¡é•¿ï¼Œä½æ•°
+ * iPubE                IN        RSAå…¬é’¥æŒ‡æ•°Eï¼Œ3æˆ–65537
+ * pucDerPublicKey      OUT       æ–°ç”Ÿæˆçš„RSAå…¬é’¥ï¼ŒDERç¼–ç 
+ * piDerPublicKeyLen    OUT       æ–°ç”Ÿæˆçš„RSAå…¬é’¥é•¿åº¦
+ * pucPrivateKey_Lmk    OUT       LMKä¸‹åŠ å¯†çš„RSAç§é’¥å¯†æ–‡
+ * piPrivateKeyLen_Lmk  OUT       LMKä¸‹åŠ å¯†çš„RSAç§é’¥å¯†æ–‡é•¿åº¦
  */
 int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     int iKeyIndex, char *pcKeyLabel,
@@ -1236,26 +1237,26 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     *p ++ = 'E';
     *p ++ = 'I';
 
-    /*** ÃÜÔ¿ÓÃÍ¾, 1N, 0¨CÇ©ÃûÃÜÔ¿£»1¨CÃÜÔ¿¹ÜÀíÃÜÔ¿£»2¨C²»ÏŞ£¬½¨ÒéÊ¹ÓÃ´ËÏî ***/
+    /*** å¯†é’¥ç”¨é€”, 1N, 0â€“ç­¾åå¯†é’¥ï¼›1â€“å¯†é’¥ç®¡ç†å¯†é’¥ï¼›2â€“ä¸é™ï¼Œå»ºè®®ä½¿ç”¨æ­¤é¡¹ ***/
     *p ++ = '2';
 
-    /*** ÃÜÔ¿Ä£³¤, 4N ***/
+    /*** å¯†é’¥æ¨¡é•¿, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iModulusBits);
     p += 4;
 
-    /*** ¹«Ô¿±àÂëÀàĞÍ, 2N, 01-ASN.1 ¸ñÊ½DER ±àÂëµÄ¹«Ô¿¡£ÕûÊıÊ¹ÓÃ2µÄ²¹Âë±íÊ¾·¨ ***/
+    /*** å…¬é’¥ç¼–ç ç±»å‹, 2N, 01-ASN.1 æ ¼å¼DER ç¼–ç çš„å…¬é’¥ã€‚æ•´æ•°ä½¿ç”¨2çš„è¡¥ç è¡¨ç¤ºæ³• ***/
     *p ++ = '0';
     *p ++ = '1';
 #if 0
-    /*** ¹«Ô¿Ö¸Êı³¤¶È, 4N, ×Ö½ÚÊı/Î»Êı£¨TODO£© ***/
+    /*** å…¬é’¥æŒ‡æ•°é•¿åº¦, 4N, å­—èŠ‚æ•°/ä½æ•°ï¼ˆTODOï¼‰ ***/
     TASS_SPRINTF((char*)p, 5, "%04d", 4);
     p += 4;
 
-    /*** ¹«Ô¿Ö¸Êı, nB ***/
+    /*** å…¬é’¥æŒ‡æ•°, nB ***/
     Tools_ConvertUint2Ucbuf(iPubE, p);
     p += 4;
 #endif
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIndex, pcKeyLabel, (char*)p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1275,7 +1276,7 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ¹«Ô¿, nB ***/
+    /*** å…¬é’¥, nB ***/
     len = Tools_GetFieldDerBufLength(p);
     if(piDerPublicKeyLen)
     {
@@ -1288,7 +1289,7 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
     }
     p += len;
 
-    /*** Ë½Ô¿³¤¶È, 4N ***/
+    /*** ç§é’¥é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKeyLen_Lmk)
@@ -1296,7 +1297,7 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
         *piPrivateKeyLen_Lmk = len;
     }
 
-    /*** LMK¼ÓÃÜµÄË½Ô¿Êı¾İ, nB ***/
+    /*** LMKåŠ å¯†çš„ç§é’¥æ•°æ®, nB ***/
     if(pucPrivateKey_Lmk)
     {
         memcpy(pucPrivateKey_Lmk, p, len);
@@ -1306,10 +1307,10 @@ int HSM_RSA_GenerateNewKeyPair(void *hSessionHandle,
 }
 
 /*
- * HSM_RSA_GetPublicKey, »ñÈ¡Ò»¶ÔRSAÃÜÔ¿µÄ¹«Ô¿
- * iKeyIndex            IN        Òªµ¼³ö¹«Ô¿µÄRSAÃÜÔ¿Ë÷Òı
- * pucDerPublicKey      OUT       µ¼³öµÄRSA¹«Ô¿£¬DER±àÂë
- * piDerPublicKeyLen    OUT       µ¼³öµÄRSA¹«Ô¿³¤¶È
+ * HSM_RSA_GetPublicKey, è·å–ä¸€å¯¹RSAå¯†é’¥çš„å…¬é’¥
+ * iKeyIndex            IN        è¦å¯¼å‡ºå…¬é’¥çš„RSAå¯†é’¥ç´¢å¼•
+ * pucDerPublicKey      OUT       å¯¼å‡ºçš„RSAå…¬é’¥ï¼ŒDERç¼–ç 
+ * piDerPublicKeyLen    OUT       å¯¼å‡ºçš„RSAå…¬é’¥é•¿åº¦
  */
 int HSM_RSA_GetPublicKey(int iKeyIndex,
     unsigned char *pucDerPublicKey/*out*/, int *piDerPublicKeyLen/*out*/)
@@ -1326,12 +1327,12 @@ int HSM_RSA_GetPublicKey(int iKeyIndex,
     *p ++ = 'E';
     *p ++ = 'R';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     TASS_SPRINTF((char*)p, 6, "K%04d", iKeyIndex);
     p += 5;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1341,7 +1342,7 @@ int HSM_RSA_GetPublicKey(int iKeyIndex,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ¹«Ô¿, nB ***/
+    /*** å…¬é’¥, nB ***/
     len = Tools_GetFieldDerBufLength(p);
     if(piDerPublicKeyLen)
     {
@@ -1357,15 +1358,15 @@ int HSM_RSA_GetPublicKey(int iKeyIndex,
 }
 
 /*
- * HSM_RSA_EncryptData, RSA¹«Ô¿¼ÓÃÜÊı¾İ
- * iPaddingMode            IN        Ìî³äÄ£Ê½£º00¨C²»Ìî³ä£¨Êı¾İ¿é³¤¶È±ØĞëºÍÄ£³¤µÈ³¤£©£»01¨CPKCS#1 v1.5
- * iKeyIndex               IN        RSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö2¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey         IN        DER±àÂëµÄRSA¹«Ô¿£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen        IN        DER±àÂëµÄRSA¹«Ô¿³¤¶È£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * pucInput                IN        Òª¼ÓÃÜµÄÊäÈëÊı¾İ£¬×î¶àÖ§³Ö136×Ö½ÚµÄ¼ÓÃÜÔËËã
- * iInputLength            IN        Òª¼ÓÃÜµÄÊäÈëÊı¾İ³¤¶È£¬×î´ó136
- * pucOutput               OUT       ¼ÓÃÜºóµÄÊä³öÊı¾İ
- * piOutputLength          OUT       ¼ÓÃÜºóµÄÊä³öÊı¾İ³¤¶È
+ * HSM_RSA_EncryptData, RSAå…¬é’¥åŠ å¯†æ•°æ®
+ * iPaddingMode            IN        å¡«å……æ¨¡å¼ï¼š00â€“ä¸å¡«å……ï¼ˆæ•°æ®å—é•¿åº¦å¿…é¡»å’Œæ¨¡é•¿ç­‰é•¿ï¼‰ï¼›01â€“PKCS#1 v1.5
+ * iKeyIndex               IN        RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey         IN        DERç¼–ç çš„RSAå…¬é’¥ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen        IN        DERç¼–ç çš„RSAå…¬é’¥é•¿åº¦ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput                IN        è¦åŠ å¯†çš„è¾“å…¥æ•°æ®ï¼Œæœ€å¤šæ”¯æŒ136å­—èŠ‚çš„åŠ å¯†è¿ç®—
+ * iInputLength            IN        è¦åŠ å¯†çš„è¾“å…¥æ•°æ®é•¿åº¦ï¼Œæœ€å¤§136
+ * pucOutput               OUT       åŠ å¯†åçš„è¾“å‡ºæ•°æ®
+ * piOutputLength          OUT       åŠ å¯†åçš„è¾“å‡ºæ•°æ®é•¿åº¦
  */
 int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
     int iKeyIndex, unsigned char *pucDerPublicKey, int iDerPublicKeyLen,
@@ -1390,26 +1391,26 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
     *p ++ = '3';
     *p ++ = 'A';
 
-    /*** Ëã·¨±êÊ¶, 2N, 01-RSA ***/
+    /*** ç®—æ³•æ ‡è¯†, 2N, 01-RSA ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** Ìî³äÄ£Ê½, 2N, 00¨C²»Ìî³ä£¨Êı¾İ¿é³¤¶È±ØĞëºÍÄ£³¤µÈ³¤£©£»01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 00â€“ä¸å¡«å……ï¼ˆæ•°æ®å—é•¿åº¦å¿…é¡»å’Œæ¨¡é•¿ç­‰é•¿ï¼‰ï¼›01â€“PKCS#1 v1.5 ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPaddingMode);
     p += 2;
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -1418,7 +1419,7 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
     TASS_SPRINTF((char*)p, 6, "K%04d", iKeyIndex);
     p += 5;
 
-    /*** ¹«Ô¿DER±àÂë ***/
+    /*** å…¬é’¥DERç¼–ç  ***/
     if(iKeyIndex == 9999)
     {
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
@@ -1426,6 +1427,8 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
     }
 
     iCmdLen = (int)(p - aucCmd);
+
+    //Tools_PrintBuf("cmd", aucCmd, iCmdLen);
     rv = TCP_CommunicateHsm_ex(hSessionHandle, aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
@@ -1436,7 +1439,7 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÎÄ³¤¶È, 4N ***/
+    /*** å¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piOutputLength)
@@ -1444,7 +1447,7 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
         *piOutputLength = len;
     }
 
-    /*** ÃÜÎÄÊı¾İ, nB ***/
+    /*** å¯†æ–‡æ•°æ®, nB ***/
     if(pucOutput)
     {
         memcpy(pucOutput, p, len);
@@ -1454,15 +1457,15 @@ int HSM_RSA_EncryptData( void *hSessionHandle,int iPaddingMode,
 }
 
 /*
- * HSM_RSA_DecryptData, RSAË½Ô¿½âÃÜÊı¾İ
- * iPaddingMode            IN        Ìî³äÄ£Ê½£º00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5
- * iKeyIndex               IN        RSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö2¸ö²ÎÊıÓĞĞ§
- * pucPrivateKey_Lmk       IN        LMK¼ÓÃÜµÄRSAË½Ô¿£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk      IN        LMK¼ÓÃÜµÄRSAË½Ô¿³¤¶È£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * pucInput                IN        Òª½âÃÜµÄÊäÈëÊı¾İ
- * iInputLength            IN        Òª½âÃÜµÄÊäÈëÊı¾İ³¤¶È
- * pucOutput               OUT       ½âÃÜºóµÄÊä³öÊı¾İ
- * piOutputLength          OUT       ½âÃÜºóµÄÊä³öÊı¾İ³¤¶È
+ * HSM_RSA_DecryptData, RSAç§é’¥è§£å¯†æ•°æ®
+ * iPaddingMode            IN        å¡«å……æ¨¡å¼ï¼š00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5
+ * iKeyIndex               IN        RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucPrivateKey_Lmk       IN        LMKåŠ å¯†çš„RSAç§é’¥ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk      IN        LMKåŠ å¯†çš„RSAç§é’¥é•¿åº¦ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput                IN        è¦è§£å¯†çš„è¾“å…¥æ•°æ®
+ * iInputLength            IN        è¦è§£å¯†çš„è¾“å…¥æ•°æ®é•¿åº¦
+ * pucOutput               OUT       è§£å¯†åçš„è¾“å‡ºæ•°æ®
+ * piOutputLength          OUT       è§£å¯†åçš„è¾“å‡ºæ•°æ®é•¿åº¦
  */
 int HSM_RSA_DecryptData(void *hSessionHandle, int iPaddingMode,
     int iKeyIndex, unsigned char *pucPrivateKey_Lmk, int iPrivateKeyLen_Lmk,
@@ -1487,26 +1490,26 @@ int HSM_RSA_DecryptData(void *hSessionHandle, int iPaddingMode,
     *p ++ = '3';
     *p ++ = 'B';
 
-    /*** Ëã·¨±êÊ¶, 2N, 01-RSA ***/
+    /*** ç®—æ³•æ ‡è¯†, 2N, 01-RSA ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** Ìî³äÄ£Ê½, 2N, 00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5 ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPaddingMode);
     p += 2;
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -1517,27 +1520,29 @@ int HSM_RSA_DecryptData(void *hSessionHandle, int iPaddingMode,
 
     if(iKeyIndex == 9999)
     {
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
     iCmdLen = (int)(p - aucCmd);
+    //printf("aucCmd = %s\n", aucCmd);
+    //Tools_PrintBuf("cmd", aucCmd, iCmdLen);
     rv = TCP_CommunicateHsm_ex(hSessionHandle,aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
         return rv;
     }
-
+    //Tools_PrintBuf("rsp", aucRsp, iRspLen);
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Êä³öÊı¾İ³¤¶È, 4N ***/
+    /*** è¾“å‡ºæ•°æ®é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piOutputLength)
@@ -1545,7 +1550,7 @@ int HSM_RSA_DecryptData(void *hSessionHandle, int iPaddingMode,
         *piOutputLength = len;
     }
 
-    /*** Êä³öÊı¾İ, nB ***/
+    /*** è¾“å‡ºæ•°æ®, nB ***/
     if(pucOutput)
     {
         memcpy(pucOutput, p, len);
@@ -1555,16 +1560,16 @@ int HSM_RSA_DecryptData(void *hSessionHandle, int iPaddingMode,
 }
 
 /*
- * HSM_RSA_GenerateSignature, RSAË½Ô¿¶ÔÊı¾İ½øĞĞÊı×ÖÇ©Ãû
- * iHashMode               IN        HASHËã·¨±êÊ¶
- * iPaddingMode            IN        Ìî³äÄ£Ê½£º00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5
- * iKeyIndex               IN        RSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö4¸ö²ÎÊıÓĞĞ§
- * pucPrivateKey_Lmk       IN        LMK¼ÓÃÜµÄRSAË½Ô¿£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk      IN        LMK¼ÓÃÜµÄRSAË½Ô¿³¤¶È£¬µ±iSm2KeyIndex=9999Ê±ÓĞĞ§
- * pucInput                IN        ´ıÇ©ÃûµÄÊäÈëÊı¾İ
- * iInputLength            IN        ´ıÇ©ÃûµÄÊäÈëÊı¾İ³¤¶È
- * pucSignature            OUT       Êä³öµÄÊı¾İÇ©Ãû
- * piSignatureLength       OUT       Êä³öµÄÊı¾İÇ©Ãû³¤¶È
+ * HSM_RSA_GenerateSignature, RSAç§é’¥å¯¹æ•°æ®è¿›è¡Œæ•°å­—ç­¾å
+ * iHashMode               IN        HASHç®—æ³•æ ‡è¯†
+ * iPaddingMode            IN        å¡«å……æ¨¡å¼ï¼š00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5
+ * iKeyIndex               IN        RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°4ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucPrivateKey_Lmk       IN        LMKåŠ å¯†çš„RSAç§é’¥ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk      IN        LMKåŠ å¯†çš„RSAç§é’¥é•¿åº¦ï¼Œå½“iSm2KeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput                IN        å¾…ç­¾åçš„è¾“å…¥æ•°æ®
+ * iInputLength            IN        å¾…ç­¾åçš„è¾“å…¥æ•°æ®é•¿åº¦
+ * pucSignature            OUT       è¾“å‡ºçš„æ•°æ®ç­¾å
+ * piSignatureLength       OUT       è¾“å‡ºçš„æ•°æ®ç­¾åé•¿åº¦
  */
 int HSM_RSA_GenerateSignature(
     int iHashMode, int iPaddingMode,
@@ -1590,30 +1595,30 @@ int HSM_RSA_GenerateSignature(
     *p ++ = 'E';
     *p ++ = 'W';
 
-    /*** HASHËã·¨±êÊ¶, 2N, ***/
+    /*** HASHç®—æ³•æ ‡è¯†, 2N, ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iHashMode);
     p += 2;
 
-    /*** Ëã·¨±êÊ¶, 2N, 01-RSA ***/
+    /*** ç®—æ³•æ ‡è¯†, 2N, 01-RSA ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** Ìî³äÄ£Ê½, 2N, 00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5 ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPaddingMode);
     p += 2;
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex <= 0)
     {
         iKeyIndex = 9999;
@@ -1624,17 +1629,17 @@ int HSM_RSA_GenerateSignature(
 
     if(iKeyIndex == 9999)
     {
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1644,7 +1649,7 @@ int HSM_RSA_GenerateSignature(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Êı×ÖÇ©Ãû³¤¶È, 4N ***/
+    /*** æ•°å­—ç­¾åé•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piSignatureLength)
@@ -1652,7 +1657,7 @@ int HSM_RSA_GenerateSignature(
         *piSignatureLength = len;
     }
 
-    /*** Êä³öÊı¾İ, nB ***/
+    /*** è¾“å‡ºæ•°æ®, nB ***/
     if(pucSignature)
     {
         memcpy(pucSignature, p, len);
@@ -1662,16 +1667,16 @@ int HSM_RSA_GenerateSignature(
 }
 
 /*
- * HSM_RSA_VerifySignature, RSA¹«Ô¿ÑéÖ¤Êı¾İµÄÇ©Ãû
- * iHashMode               IN        HASHËã·¨±êÊ¶
- * iPaddingMode            IN        Ìî³äÄ£Ê½£º00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5
- * iKeyIndex               IN        RSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±ÏÂÊö2¸ö²ÎÊıÓĞĞ§
- * pucDerPublicKey         IN        DER±àÂëµÄRSA¹«Ô¿£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen        IN        DER±àÂëµÄRSA¹«Ô¿³¤¶È£¬µ±iKeyIndex=9999Ê±ÓĞĞ§
- * pucInput                IN        ´ıÑéÖ¤Ç©ÃûµÄÊäÈëÊı¾İ
- * iInputLength            IN        ´ıÑéÖ¤Ç©ÃûµÄÊäÈëÊı¾İ³¤¶È
- * pucSignature            IN        ´ıÑéÖ¤µÄÊı¾İÇ©Ãû
- * iSignatureLength        IN        ´ıÑéÖ¤µÄÊı¾İÇ©Ãû³¤¶È
+ * HSM_RSA_VerifySignature, RSAå…¬é’¥éªŒè¯æ•°æ®çš„ç­¾å
+ * iHashMode               IN        HASHç®—æ³•æ ‡è¯†
+ * iPaddingMode            IN        å¡«å……æ¨¡å¼ï¼š00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5
+ * iKeyIndex               IN        RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶ä¸‹è¿°2ä¸ªå‚æ•°æœ‰æ•ˆ
+ * pucDerPublicKey         IN        DERç¼–ç çš„RSAå…¬é’¥ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen        IN        DERç¼–ç çš„RSAå…¬é’¥é•¿åº¦ï¼Œå½“iKeyIndex=9999æ—¶æœ‰æ•ˆ
+ * pucInput                IN        å¾…éªŒè¯ç­¾åçš„è¾“å…¥æ•°æ®
+ * iInputLength            IN        å¾…éªŒè¯ç­¾åçš„è¾“å…¥æ•°æ®é•¿åº¦
+ * pucSignature            IN        å¾…éªŒè¯çš„æ•°æ®ç­¾å
+ * iSignatureLength        IN        å¾…éªŒè¯çš„æ•°æ®ç­¾åé•¿åº¦
  */
 int HSM_RSA_VerifySignature(
     int iHashMode, int iPaddingMode,
@@ -1697,41 +1702,41 @@ int HSM_RSA_VerifySignature(
     *p ++ = 'E';
     *p ++ = 'Y';
 
-    /*** HASHËã·¨±êÊ¶, 2N, ***/
+    /*** HASHç®—æ³•æ ‡è¯†, 2N, ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iHashMode);
     p += 2;
 
-    /*** Ëã·¨±êÊ¶, 2N, 01-RSA ***/
+    /*** ç®—æ³•æ ‡è¯†, 2N, 01-RSA ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** Ìî³äÄ£Ê½, 2N, 00¨C²»Ìî³ä£¨½âÃÜºóµÄÊı¾İÖ±½ÓÊä³ö£©£»01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 00â€“ä¸å¡«å……ï¼ˆè§£å¯†åçš„æ•°æ®ç›´æ¥è¾“å‡ºï¼‰ï¼›01â€“PKCS#1 v1.5 ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPaddingMode);
     p += 2;
 
-    /*** ´ıÑéÇ©µÄÇ©Ãû³¤¶È, 4N ***/
+    /*** å¾…éªŒç­¾çš„ç­¾åé•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iSignatureLength);
     p += 4;
 
-    /*** ´ıÑéÇ©µÄÇ©Ãû, nB ***/
+    /*** å¾…éªŒç­¾çš„ç­¾å, nB ***/
     memcpy(p, pucSignature, iSignatureLength);
     p += iSignatureLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** Êı¾İ¿é³¤¶È, 4N ***/
+    /*** æ•°æ®å—é•¿åº¦, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ¿é, nB ***/
+    /*** æ•°æ®å—, nB ***/
     memcpy(p, pucInput, iInputLength);
     p += iInputLength;
 
-    /*** ·Ö¸ô·û, 1A ***/
+    /*** åˆ†éš”ç¬¦, 1A ***/
     *p ++ = ';';
 
-    /*** ÃÜÔ¿Ë÷Òı, K+4N ***/
+    /*** å¯†é’¥ç´¢å¼•, K+4N ***/
     if(iKeyIndex<=0)
     {
         iKeyIndex = 9999;
@@ -1742,13 +1747,13 @@ int HSM_RSA_VerifySignature(
 
     if(iKeyIndex == 9999)
     {
-        /*** DER±àÂëµÄSM2¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„SM2å…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+   // rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1758,13 +1763,13 @@ int HSM_RSA_VerifySignature(
 }
 
 /*
- * HSM_RSA_GeneratePublicKeyMac, ÔÚÊÚÈ¨¿ØÖÆÏÂÎªRSA¹«Ô¿²úÉú¹«Ô¿MAC
- * pucDerPublicKey         IN        Òª¼ÆËãMACµÄRSA¹«Ô¿£¬DER±àÂë
- * iDerPublicKeyLen        IN        Òª¼ÆËãMACµÄRSA¹«Ô¿³¤¶È
- * pucAuthData             IN        ¹«Ô¿¼ø±ğÊı¾İ£¬²»ÄÜ´ø';'×Ö·û
- * iAuthDataLen            IN        ¹«Ô¿¼ø±ğÊı¾İ³¤¶È
- * pucMac                  OUT       RSA¹«Ô¿µÄMACÖµ
- * piMacLen                OUT       RSA¹«Ô¿µÄMACÖµ³¤¶È
+ * HSM_RSA_GeneratePublicKeyMac, åœ¨æˆæƒæ§åˆ¶ä¸‹ä¸ºRSAå…¬é’¥äº§ç”Ÿå…¬é’¥MAC
+ * pucDerPublicKey         IN        è¦è®¡ç®—MACçš„RSAå…¬é’¥ï¼ŒDERç¼–ç 
+ * iDerPublicKeyLen        IN        è¦è®¡ç®—MACçš„RSAå…¬é’¥é•¿åº¦
+ * pucAuthData             IN        å…¬é’¥é‰´åˆ«æ•°æ®ï¼Œä¸èƒ½å¸¦';'å­—ç¬¦
+ * iAuthDataLen            IN        å…¬é’¥é‰´åˆ«æ•°æ®é•¿åº¦
+ * pucMac                  OUT       RSAå…¬é’¥çš„MACå€¼
+ * piMacLen                OUT       RSAå…¬é’¥çš„MACå€¼é•¿åº¦
  */
 int HSM_RSA_GeneratePublicKeyMac(
     unsigned char *pucDerPublicKey, int iDerPublicKeyLen,
@@ -1789,20 +1794,20 @@ int HSM_RSA_GeneratePublicKeyMac(
     *p ++ = 'E';
     *p ++ = 'O';
 
-    /*** ¹«Ô¿±àÂëÀàĞÍ, 2N, 01¨CASN.1 ¸ñÊ½DER ±àÂëµÄ¹«Ô¿¡£ÕûÊıÊ¹ÓÃÎŞ·ûºÅ±íÊ¾·¨ ***/
+    /*** å…¬é’¥ç¼–ç ç±»å‹, 2N, 01â€“ASN.1 æ ¼å¼DER ç¼–ç çš„å…¬é’¥ã€‚æ•´æ•°ä½¿ç”¨æ— ç¬¦å·è¡¨ç¤ºæ³• ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** DER±àÂëµÄRSA¹«Ô¿, nB ***/
+    /*** DERç¼–ç çš„RSAå…¬é’¥, nB ***/
     memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
     p += iDerPublicKeyLen;
 
-    /*** ÓÃÓÚ¼ÆËã¹«Ô¿MACµÄ¶îÍâµÄÊı¾İ£¨²»ÄÜ°üº¬×Ö·û¡¯;¡¯£©, nB ***/
+    /*** ç”¨äºè®¡ç®—å…¬é’¥MACçš„é¢å¤–çš„æ•°æ®ï¼ˆä¸èƒ½åŒ…å«å­—ç¬¦â€™;â€™ï¼‰, nB ***/
     memcpy(p, pucAuthData, iAuthDataLen);
     p += iAuthDataLen;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1812,7 +1817,7 @@ int HSM_RSA_GeneratePublicKeyMac(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Ê¹ÓÃLMK·Ö×é¶Ô¹«Ô¿ºÍÈÏÖ¤Êı¾İ¼ÆËãµÄMAC£¬4B ***/
+    /*** ä½¿ç”¨LMKåˆ†ç»„å¯¹å…¬é’¥å’Œè®¤è¯æ•°æ®è®¡ç®—çš„MACï¼Œ4B ***/
     if(piMacLen)
     {
         *piMacLen = 4;
@@ -1827,22 +1832,22 @@ int HSM_RSA_GeneratePublicKeyMac(
 }
 
 /*
- * HSM_RSA_ExportSymmetricKey, ÓÉRSA¹«Ô¿¼ÓÃÜ±£»¤µ¼³öÒ»Ìõ¶Ô³ÆÃÜÔ¿
- * pcKeyType               IN        ±»µ¼³öÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ
- * iKeyIndex               IN        ±»µ¼³öÃÜÔ¿µÄË÷Òı¡£<=0, Ê¹ÓÃpcKey_Lmk²ÎÊı£»·ñÔòÊ¹ÓÃË÷ÒıÖ¸¶¨µÄÃÜÔ¿
- * pcKey_Lmk               IN        LMK¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿µÄÃÜÎÄ¡£µ±iKeyIndex<=0Ê±ÓĞĞ§
- * iKeyDeriveNumber        IN        ±»µ¼³öÃÜÔ¿µÄ·ÖÉ¢¼¶Êı
- * pcKeyDeriveData         IN        ±»µ¼³öÃÜÔ¿µÄ·ÖÉ¢Òò×Ó£¬Ã¿¼¶32H
- * iRsaKeyIndex            IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶Ê¹ÓÃpucDerPublicKey²ÎÊı
- * pucDerPublicKey         IN        ×÷Îª±£»¤ÃÜÔ¿µÄDER±àÂëµÄRSA¹«Ô¿£¬½öµ±iRsaKeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * iDerPublicKeyLen        IN        ×÷Îª±£»¤ÃÜÔ¿µÄDER±àÂëµÄRSA¹«Ô¿³¤¶È£¬½öµ±iRsaKeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * pucAuthData             IN        ×÷Îª±£»¤ÃÜÔ¿µÄ¹«Ô¿¼ø±ğÊı¾İ£¬²»ÄÜ´ø';'×Ö·û
- * iAuthDataLen            IN        ×÷Îª±£»¤ÃÜÔ¿µÄ¹«Ô¿¼ø±ğÊı¾İ³¤¶È
- * pucMac                  IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSA¹«Ô¿µÄMACÖµ
- * iMacLen                 IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSA¹«Ô¿µÄMACÖµ³¤¶È
- * pucCipherKey            OUT       RSAÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ
- * piCipherKeyLen          OUT       RSAÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ³¤¶È
- * pcKeyCv                 OUT       ±»µ¼³öÃÜÔ¿µÄĞ£ÑéÖµ
+ * HSM_RSA_ExportSymmetricKey, ç”±RSAå…¬é’¥åŠ å¯†ä¿æŠ¤å¯¼å‡ºä¸€æ¡å¯¹ç§°å¯†é’¥
+ * pcKeyType               IN        è¢«å¯¼å‡ºå¯†é’¥çš„å¯†é’¥ç±»å‹
+ * iKeyIndex               IN        è¢«å¯¼å‡ºå¯†é’¥çš„ç´¢å¼•ã€‚<=0, ä½¿ç”¨pcKey_Lmkå‚æ•°ï¼›å¦åˆ™ä½¿ç”¨ç´¢å¼•æŒ‡å®šçš„å¯†é’¥
+ * pcKey_Lmk               IN        LMKåŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥çš„å¯†æ–‡ã€‚å½“iKeyIndex<=0æ—¶æœ‰æ•ˆ
+ * iKeyDeriveNumber        IN        è¢«å¯¼å‡ºå¯†é’¥çš„åˆ†æ•£çº§æ•°
+ * pcKeyDeriveData         IN        è¢«å¯¼å‡ºå¯†é’¥çš„åˆ†æ•£å› å­ï¼Œæ¯çº§32H
+ * iRsaKeyIndex            IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä½¿ç”¨pucDerPublicKeyå‚æ•°
+ * pucDerPublicKey         IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„DERç¼–ç çš„RSAå…¬é’¥ï¼Œä»…å½“iRsaKeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * iDerPublicKeyLen        IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„DERç¼–ç çš„RSAå…¬é’¥é•¿åº¦ï¼Œä»…å½“iRsaKeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * pucAuthData             IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„å…¬é’¥é‰´åˆ«æ•°æ®ï¼Œä¸èƒ½å¸¦';'å­—ç¬¦
+ * iAuthDataLen            IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„å…¬é’¥é‰´åˆ«æ•°æ®é•¿åº¦
+ * pucMac                  IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAå…¬é’¥çš„MACå€¼
+ * iMacLen                 IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAå…¬é’¥çš„MACå€¼é•¿åº¦
+ * pucCipherKey            OUT       RSAå¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡
+ * piCipherKeyLen          OUT       RSAå¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡é•¿åº¦
+ * pcKeyCv                 OUT       è¢«å¯¼å‡ºå¯†é’¥çš„æ ¡éªŒå€¼
  */
 int HSM_RSA_ExportSymmetricKey(
     char *pcKeyType, int iKeyIndex, char *pcKey_Lmk,
@@ -1866,15 +1871,15 @@ int HSM_RSA_ExportSymmetricKey(
     *p ++ = 'T';
     *p ++ = 'V';
 
-    /*** Ìî³äÄ£Ê½, 2N, 01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 01â€“PKCS#1 v1.5 ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** ±»µ¼³öÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥çš„å¯†é’¥ç±»å‹ ***/
     memcpy(p, pcKeyType, 3);
     p += 3;
 
-    /*** ±»µ¼³öÃÜÔ¿ ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIndex, pcKey_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -1883,7 +1888,7 @@ int HSM_RSA_ExportSymmetricKey(
     }
     p += rv;
 
-    /*** ±»µ¼³öÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iKeyDeriveNumber, pcKeyDeriveData, p);
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -1892,7 +1897,7 @@ int HSM_RSA_ExportSymmetricKey(
     }
     p += rv;
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if (iRsaKeyIndex <= 0)
     {
         iRsaKeyIndex = 9999;
@@ -1903,24 +1908,24 @@ int HSM_RSA_ExportSymmetricKey(
 
     if(iRsaKeyIndex == 9999)
     {
-        /*** DER±àÂëµÄRSA¹«Ô¿, nB ***/
+        /*** DERç¼–ç çš„RSAå…¬é’¥, nB ***/
         memcpy(p, pucDerPublicKey, iDerPublicKeyLen);
         p += iDerPublicKeyLen;
 
-        /*** ÓÃÓÚ¼ÆËã¹«Ô¿MACµÄ¶îÍâµÄÊı¾İ£¨²»ÄÜ°üº¬×Ö·û¡¯;¡¯£©, nB ***/
+        /*** ç”¨äºè®¡ç®—å…¬é’¥MACçš„é¢å¤–çš„æ•°æ®ï¼ˆä¸èƒ½åŒ…å«å­—ç¬¦â€™;â€™ï¼‰, nB ***/
         memcpy(p, pucAuthData, iAuthDataLen);
         p += iAuthDataLen;
 
-        /*** ÈÏÖ¤Êı¾İ·Ö¸ô·û,';' ***/
+        /*** è®¤è¯æ•°æ®åˆ†éš”ç¬¦,';' ***/
         *p ++ = ';';
 
-        /*** ¹«Ô¿MAC, 4B ***/
+        /*** å…¬é’¥MAC, 4B ***/
         memcpy(p, pucMac, 4);
         p += 4;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1930,7 +1935,7 @@ int HSM_RSA_ExportSymmetricKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** RSAÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ³¤¶È, 4N ***/
+    /*** RSAå¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡é•¿åº¦, 4N ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piCipherKeyLen)
@@ -1938,14 +1943,14 @@ int HSM_RSA_ExportSymmetricKey(
         *piCipherKeyLen = len;
     }
 
-    /*** RSAÃÜÔ¿¼ÓÃÜµÄ±»µ¼³öÃÜÔ¿ÃÜÎÄ, nB ***/
+    /*** RSAå¯†é’¥åŠ å¯†çš„è¢«å¯¼å‡ºå¯†é’¥å¯†æ–‡, nB ***/
     if(pucCipherKey)
     {
         memcpy(pucCipherKey, p, len);
     }
     p += len;
 
-    /*** ±»µ¼³öÃÜÔ¿µÄĞ£ÑéÖµ ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥çš„æ ¡éªŒå€¼ ***/
     if(pcKeyCv)
     {
         strncpy(pcKeyCv, p, 16);
@@ -1955,18 +1960,18 @@ int HSM_RSA_ExportSymmetricKey(
 }
 
 /*
- * HSM_RSA_ImportSymmetricKey, ÓÉRSA¹«Ô¿¼ÓÃÜ±£»¤µ¼ÈëÒ»Ìõ¶Ô³ÆÃÜÔ¿
- * pcKeyType               IN        ±»µ¼ÈëÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ
- * cKeyScheme              IN        ±»µ¼ÈëÃÜÔ¿µÄËã·¨±êÊ¶£ºZ/X/Y/U/T/P/L/R
- * iKeyIndex               IN        ±»µ¼ÈëÃÜÔ¿µÄË÷Òı¡£<=0, ±êÊ¶ÃÜÔ¿²»´æ´¢µ½ÄÚ²¿
- * pcKeyLabel              IN        ±»µ¼ÈëÃÜÔ¿µÄ±êÇ©¡£µ±iKeyIndex>0Ê±ÓĞĞ§
- * iRsaKeyIndex            IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSAÃÜÔ¿Ë÷Òı£¬<=0»ò=9999Ê±±êÊ¶Ê¹ÓÃpucPrivateKey_Lmk²ÎÊı
- * pucPrivateKey_Lmk       IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSAË½Ô¿ÃÜÎÄ£¬½öµ±iRsaKeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * iPrivateKeyLen_Lmk      IN        ×÷Îª±£»¤ÃÜÔ¿µÄRSAË½Ô¿ÃÜÎÄ³¤¶È£¬½öµ±iRsaKeyIndex<=0»ò=9999Ê±ÓĞĞ§
- * pucCipherKey            IN        RSA¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ
- * iCipherKeyLen           IN        RSA¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ³¤¶È
- * pcKey_Lmk               OUT       LMKÏÂ¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ
- * pcKeyCv                 OUT       ±»µ¼ÈëÃÜÔ¿µÄĞ£ÑéÖµ
+ * HSM_RSA_ImportSymmetricKey, ç”±RSAå…¬é’¥åŠ å¯†ä¿æŠ¤å¯¼å…¥ä¸€æ¡å¯¹ç§°å¯†é’¥
+ * pcKeyType               IN        è¢«å¯¼å…¥å¯†é’¥çš„å¯†é’¥ç±»å‹
+ * cKeyScheme              IN        è¢«å¯¼å…¥å¯†é’¥çš„ç®—æ³•æ ‡è¯†ï¼šZ/X/Y/U/T/P/L/R
+ * iKeyIndex               IN        è¢«å¯¼å…¥å¯†é’¥çš„ç´¢å¼•ã€‚<=0, æ ‡è¯†å¯†é’¥ä¸å­˜å‚¨åˆ°å†…éƒ¨
+ * pcKeyLabel              IN        è¢«å¯¼å…¥å¯†é’¥çš„æ ‡ç­¾ã€‚å½“iKeyIndex>0æ—¶æœ‰æ•ˆ
+ * iRsaKeyIndex            IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAå¯†é’¥ç´¢å¼•ï¼Œ<=0æˆ–=9999æ—¶æ ‡è¯†ä½¿ç”¨pucPrivateKey_Lmkå‚æ•°
+ * pucPrivateKey_Lmk       IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAç§é’¥å¯†æ–‡ï¼Œä»…å½“iRsaKeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * iPrivateKeyLen_Lmk      IN        ä½œä¸ºä¿æŠ¤å¯†é’¥çš„RSAç§é’¥å¯†æ–‡é•¿åº¦ï¼Œä»…å½“iRsaKeyIndex<=0æˆ–=9999æ—¶æœ‰æ•ˆ
+ * pucCipherKey            IN        RSAå…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡
+ * iCipherKeyLen           IN        RSAå…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡é•¿åº¦
+ * pcKey_Lmk               OUT       LMKä¸‹åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡
+ * pcKeyCv                 OUT       è¢«å¯¼å…¥å¯†é’¥çš„æ ¡éªŒå€¼
  */
 int HSM_RSA_ImportSymmetricKey(
     char *pcKeyType, char cKeyScheme,
@@ -1988,18 +1993,18 @@ int HSM_RSA_ImportSymmetricKey(
     *p ++ = 'T';
     *p ++ = 'W';
 
-    /*** Ìî³äÄ£Ê½, 2N, 01¨CPKCS#1 v1.5 ***/
+    /*** å¡«å……æ¨¡å¼, 2N, 01â€“PKCS#1 v1.5 ***/
     *p ++ = '0';
     *p ++ = '1';
 
-    /*** ±»µ¼ÈëÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ ***/
+    /*** è¢«å¯¼å…¥å¯†é’¥çš„å¯†é’¥ç±»å‹ ***/
     memcpy( p, pcKeyType, 3 );
     p += 3;
 
-    /*** ±»µ¼ÈëÃÜÔ¿µÄËã·¨±êÊ¶£ºZ/X/Y/U/T/P/L/R ***/
+    /*** è¢«å¯¼å…¥å¯†é’¥çš„ç®—æ³•æ ‡è¯†ï¼šZ/X/Y/U/T/P/L/R ***/
     *p ++ = cKeyScheme;
 
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIndex, pcKeyLabel, (char*)p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -2008,19 +2013,19 @@ int HSM_RSA_ImportSymmetricKey(
     }
     p += rv;
 
-    /*** µ¼ÈëÃÜÔ¿µÄĞ£ÑéÖµ, 16H, È«0Ôò²»Ğ£Ñé£¬Ö±½ÓÍê³Éµ¼Èë¹¤×÷£» ***/
+    /*** å¯¼å…¥å¯†é’¥çš„æ ¡éªŒå€¼, 16H, å…¨0åˆ™ä¸æ ¡éªŒï¼Œç›´æ¥å®Œæˆå¯¼å…¥å·¥ä½œï¼› ***/
     memset(p, '0', 16);
     p += 16;
 
-    /*** RSA¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ³¤¶È, 4H ***/
+    /*** RSAå…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡é•¿åº¦, 4H ***/
     TASS_SPRINTF((char*)p, 5, "%04X", iCipherKeyLen);
     p += 4;
 
-    /*** RSA¹«Ô¿¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ, nB ***/
+    /*** RSAå…¬é’¥åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡, nB ***/
     memcpy(p, pucCipherKey, iCipherKeyLen);
     p += iCipherKeyLen;
 
-    /*** ÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•, 4N ***/
     if(iRsaKeyIndex<=0)
     {
         iRsaKeyIndex = 9999;
@@ -2031,17 +2036,17 @@ int HSM_RSA_ImportSymmetricKey(
 
     if(iRsaKeyIndex == 9999)
     {
-        /*** Ë½Ô¿³¤¶È, 4N ***/
+        /*** ç§é’¥é•¿åº¦, 4N ***/
         TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen_Lmk);
         p += 4;
 
-        /*** LMK¼ÓÃÜµÄÃÜÎÄË½Ô¿Êı¾İ, nB ***/
+        /*** LMKåŠ å¯†çš„å¯†æ–‡ç§é’¥æ•°æ®, nB ***/
         memcpy(p, pucPrivateKey_Lmk, iPrivateKeyLen_Lmk);
         p += iPrivateKeyLen_Lmk;
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -2051,7 +2056,7 @@ int HSM_RSA_ImportSymmetricKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** LMKÏÂ¼ÓÃÜµÄ±»µ¼ÈëÃÜÔ¿ÃÜÎÄ ***/
+    /*** LMKä¸‹åŠ å¯†çš„è¢«å¯¼å…¥å¯†é’¥å¯†æ–‡ ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if (pcKey_Lmk)
     {
@@ -2059,7 +2064,7 @@ int HSM_RSA_ImportSymmetricKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if (pcKeyCv)
     {
         strncpy(pcKeyCv, (char *)p, 16);
@@ -2069,20 +2074,20 @@ int HSM_RSA_ImportSymmetricKey(
 }
 
 /*
- * HSM_RSA_ExportRSAKey     ±£»¤ÃÜÔ¿£¨¶Ô³Æ£©¼ÓÃÜµ¼ÈëÒ»¶ÔRSAÃÜÔ¿
- * iMode                    ¼ÓÃÜËã·¨Ä£Ê½  2 H  00 ¨C ECB 01 ¨C CBC
- * pcTkType                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAÃÜÔ¿µÄ±£»¤ÃÜÔ¿ÀàĞÍ 000 ¨C KEK;   109 ¨C MDK;
- * iTkIndex                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAµÄ±£»¤ÃÜÔ¿Ë÷Òı
- * pcTk_Lmk                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAµÄ±£»¤ÃÜÔ¿ÃÜÎÄ
- * iTkDeriveNumber          ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı
- * pcTkDeriveData           ±£»¤ÃÜÔ¿·ÖÉ¢Òò×Ó
- * iRsaKeyIndex             ±»µ¼³öÃÜÔ¿Ë÷ÒıºÅ
- * pucPrivateKey            ±»µ¼³öÃÜÔ¿Ë½Ô¿Êı¾İ
- * iPrivateKeyLen           ±»µ¼³öÃÜÔ¿Ë½Ô¿³¤¶È
- * pcExpandFlg              À©Õ¹±êÊ¶
- * pcPADFlg                 ±êÊ¶±»µ¼³öµÄ¸÷Ë½Ô¿·ÖÁ¿µÄÌî³ä¹æÔò
- * iOutPublicKeyFlg         ¹«Ô¿Êä³ö¸ñÊ½,0 - Ã÷ÎÄDER¸ñÊ½Êä³ö£¬ ASN.1 ¸ñÊ½DER ±àÂë£¨Ä££¬Ö¸ÊıĞòÁĞ£© 1 - m¼°e²ÉÓÃ·ÖÁ¿ÃÜÎÄĞÎÊ½Êä³ö
- * pcIV                     ³õÊ¼»¯ÏòÁ¿
+ * HSM_RSA_ExportRSAKey     ä¿æŠ¤å¯†é’¥ï¼ˆå¯¹ç§°ï¼‰åŠ å¯†å¯¼å…¥ä¸€å¯¹RSAå¯†é’¥
+ * iMode                    åŠ å¯†ç®—æ³•æ¨¡å¼  2 H  00 â€“ ECB 01 â€“ CBC
+ * pcTkType                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAå¯†é’¥çš„ä¿æŠ¤å¯†é’¥ç±»å‹ 000 â€“ KEK;   109 â€“ MDK;
+ * iTkIndex                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAçš„ä¿æŠ¤å¯†é’¥ç´¢å¼•
+ * pcTk_Lmk                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAçš„ä¿æŠ¤å¯†é’¥å¯†æ–‡
+ * iTkDeriveNumber          ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°
+ * pcTkDeriveData           ä¿æŠ¤å¯†é’¥åˆ†æ•£å› å­
+ * iRsaKeyIndex             è¢«å¯¼å‡ºå¯†é’¥ç´¢å¼•å·
+ * pucPrivateKey            è¢«å¯¼å‡ºå¯†é’¥ç§é’¥æ•°æ®
+ * iPrivateKeyLen           è¢«å¯¼å‡ºå¯†é’¥ç§é’¥é•¿åº¦
+ * pcExpandFlg              æ‰©å±•æ ‡è¯†
+ * pcPADFlg                 æ ‡è¯†è¢«å¯¼å‡ºçš„å„ç§é’¥åˆ†é‡çš„å¡«å……è§„åˆ™
+ * iOutPublicKeyFlg         å…¬é’¥è¾“å‡ºæ ¼å¼,0 - æ˜æ–‡DERæ ¼å¼è¾“å‡ºï¼Œ ASN.1 æ ¼å¼DER ç¼–ç ï¼ˆæ¨¡ï¼ŒæŒ‡æ•°åºåˆ—ï¼‰ 1 - måŠeé‡‡ç”¨åˆ†é‡å¯†æ–‡å½¢å¼è¾“å‡º
+ * pcIV                     åˆå§‹åŒ–å‘é‡
  */
 
 int HSM_RSA_ExportRSAKey(void *hSessionHandle,
@@ -2115,15 +2120,15 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
     *p ++ = 'T';
     *p ++ = 'R';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½ ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ±»µ¼³öÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥çš„å¯†é’¥ç±»å‹ ***/
     memcpy(p, pcTkType, 3);
     p += 3;
 
-    /*** ±£»¤ÃÜÔ¿ÃÜÔ¿ ***/
+    /*** ä¿æŠ¤å¯†é’¥å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iTkIndex, pcTk_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -2132,7 +2137,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
     }
     p += rv;
 
-    /*** ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iTkDeriveNumber, pcTkDeriveData, (char*)p);
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -2141,7 +2146,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
     }
     p += rv;
 
-    /*** ±»µ¼³öÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** è¢«å¯¼å‡ºå¯†é’¥ç´¢å¼•, 4N ***/
     if(iRsaKeyIndex <= 0)
     {
         iRsaKeyIndex = 9999;
@@ -2152,26 +2157,26 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
 
     if(iRsaKeyIndex == 9999)
     {
-	/*** ±»µ¼³öµÄRSAË½Ô¿×Ö½ÚÊı ***/
+	/*** è¢«å¯¼å‡ºçš„RSAç§é’¥å­—èŠ‚æ•° ***/
     	TASS_SPRINTF((char*)p, 5, "%04d", iPrivateKeyLen);
     	p += 4;
 
-        /*** ±»µ¼³öµÄRSAË½Ô¿, nB ***/
+        /*** è¢«å¯¼å‡ºçš„RSAç§é’¥, nB ***/
         memcpy(p, pucPrivateKey, iPrivateKeyLen);
         p += iPrivateKeyLen;
     }
 
     if(!strcmp(pcExpandFlg, "P"))
     {
-        /*** À©Õ¹±êÊ¶ ***/
+        /*** æ‰©å±•æ ‡è¯† ***/
         memcpy(p, pcExpandFlg, 1);
         p += 1;
 
-        /*** PAD±êÊ¶ ***/
+        /*** PADæ ‡è¯† ***/
         memcpy(p, pcPADFlg, 2);
         p += 2;
 
-        /*** 0 - Ã÷ÎÄDER¸ñÊ½Êä³ö£¬ ASN.1 ¸ñÊ½DER ±àÂë£¨Ä££¬Ö¸ÊıĞòÁĞ£© 1 - m¼°e²ÉÓÃ·ÖÁ¿ÃÜÎÄĞÎÊ½Êä³ö ***/
+        /*** 0 - æ˜æ–‡DERæ ¼å¼è¾“å‡ºï¼Œ ASN.1 æ ¼å¼DER ç¼–ç ï¼ˆæ¨¡ï¼ŒæŒ‡æ•°åºåˆ—ï¼‰ 1 - måŠeé‡‡ç”¨åˆ†é‡å¯†æ–‡å½¢å¼è¾“å‡º ***/
         TASS_SPRINTF((char*)p, 2, "%d", iOutPublicKeyFlg);
         p += 1;
 
@@ -2181,6 +2186,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
     }
 
     iCmdLen = (int)(p - aucCmd);
+
     rv = TCP_CommunicateHsm_ex(hSessionHandle, aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
@@ -2193,7 +2199,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
 
     if(iOutPublicKeyFlg == 0 || strcmp(pcExpandFlg, "P"))
     {
-        /*** DER±àÂë¹«Ô¿, nB ***/
+        /*** DERç¼–ç å…¬é’¥, nB ***/
         len = Tools_GetFieldDerBufLength(p);
         if(piDerPublicKeyLen)
         {
@@ -2205,9 +2211,9 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         }
         p += len;
     }
-    else if(iOutPublicKeyFlg == 1 && (!strcmp(pcExpandFlg, "P")))/***  m¼°e²ÉÓÃ·ÖÁ¿ÃÜÎÄĞÎÊ½Êä³öµÄ¹«Ô¿ ***/
+    else if(iOutPublicKeyFlg == 1 && (!strcmp(pcExpandFlg, "P")))/***  måŠeé‡‡ç”¨åˆ†é‡å¯†æ–‡å½¢å¼è¾“å‡ºçš„å…¬é’¥ ***/
     {
-        /*** ¹«Ô¿Ä£mÃÜÎÄ³¤¶È  ***/
+        /*** å…¬é’¥æ¨¡må¯†æ–‡é•¿åº¦  ***/
         len = Tools_ConvertDecBuf2Int(p, 4);
         p += 4;
         if (piPublicKey_mLen)
@@ -2216,14 +2222,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
             *piPublicKey_mLen = len;
         }
 
-        /*** ¹«Ô¿Ä£mÃÜÎÄ  ***/
+        /*** å…¬é’¥æ¨¡må¯†æ–‡  ***/
         if(pucPublicKey_m)
         {
             memcpy(pucPublicKey_m, p, len);
         }
         p += len;
 
-        /*** ¹«Ô¿Ö¸ÊıeÃÜÎÄ³¤¶È ***/
+        /*** å…¬é’¥æŒ‡æ•°eå¯†æ–‡é•¿åº¦ ***/
         len = Tools_ConvertDecBuf2Int(p, 4);
         p += 4;
         if (piPublicKey_eLen)
@@ -2232,7 +2238,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
             *piPublicKey_eLen = len;
         }
 
-        /*** ¹«Ô¿Ö¸ÊıeÃÜÎÄ ***/
+        /*** å…¬é’¥æŒ‡æ•°eå¯†æ–‡ ***/
         if(pucPublicKey_e)
         {
             memcpy(pucPublicKey_e, p, len);
@@ -2240,7 +2246,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         p += len;
     }
 
-    /*** Ë½Ô¿Ö¸ÊıdÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥æŒ‡æ•°då¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if (piPrivateKey_dLen)
@@ -2248,14 +2254,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_dLen = len;
     }
 
-    /*** Ë½Ô¿Ö¸ÊıdÃÜÎÄ ***/
+    /*** ç§é’¥æŒ‡æ•°då¯†æ–‡ ***/
     if (pucPrivateKey_d)
     {
         memcpy(pucPrivateKey_d, p, len);
     }
     p += len;
 
-    /*** Ë½Ô¿·ÖÁ¿PÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥åˆ†é‡På¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if (piPrivateKey_pLen)
@@ -2263,14 +2269,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_pLen = len;
     }
 
-    /*** Ë½Ô¿·ÖÁ¿PÃÜÎÄ ***/
+    /*** ç§é’¥åˆ†é‡På¯†æ–‡ ***/
     if(pucPrivateKey_p)
     {
         memcpy(pucPrivateKey_p, p, len);
     }
     p += len;
 
-    /*** Ë½Ô¿·ÖÁ¿QÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥åˆ†é‡Qå¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if (piPrivateKey_qLen)
@@ -2278,14 +2284,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_qLen = len;
     }
 
-    /*** Ë½Ô¿·ÖÁ¿QÃÜÎÄ ***/
+    /*** ç§é’¥åˆ†é‡Qå¯†æ–‡ ***/
     if(pucPrivateKey_q)
     {
         memcpy(pucPrivateKey_q, p, len);
     }
     p += len;
 
-    /*** Ë½Ô¿·ÖÁ¿dP ÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥åˆ†é‡dP å¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if (piPrivateKey_dpLen)
@@ -2293,14 +2299,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_dpLen = len;
     }
 
-    /*** Ë½Ô¿·ÖÁ¿dPÃÜÎÄ ***/
+    /*** ç§é’¥åˆ†é‡dPå¯†æ–‡ ***/
     if (pucPrivateKey_dp)
     {
         memcpy(pucPrivateKey_dp, p, len);
     }
     p += len;
 
-    /*** Ë½Ô¿·ÖÁ¿dQ ÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥åˆ†é‡dQ å¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKey_dqLen)
@@ -2308,14 +2314,14 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_dqLen = len;
     }
 
-    /*** Ë½Ô¿·ÖÁ¿dQÃÜÎÄ ***/
+    /*** ç§é’¥åˆ†é‡dQå¯†æ–‡ ***/
     if(pucPrivateKey_dq)
     {
         memcpy(pucPrivateKey_dq, p, len);
     }
     p += len;
 
-    /*** Ë½Ô¿·ÖÁ¿qInv ÃÜÎÄ³¤¶È ***/
+    /*** ç§é’¥åˆ†é‡qInv å¯†æ–‡é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKey_qInvLen)
@@ -2323,7 +2329,7 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
         *piPrivateKey_qInvLen = len;
     }
 
-    /*** Ë½Ô¿·ÖÁ¿qInvÃÜÎÄ ***/
+    /*** ç§é’¥åˆ†é‡qInvå¯†æ–‡ ***/
     if(pucPrivateKey_qInv)
     {
         memcpy(pucPrivateKey_qInv, p, len);
@@ -2333,30 +2339,30 @@ int HSM_RSA_ExportRSAKey(void *hSessionHandle,
 }
 
 /*
- * HSM_RSA_ImportByTk     ±£»¤ÃÜÔ¿£¨¶Ô³Æ£©¼ÓÃÜµ¼ÈëÒ»¶ÔRSAÃÜÔ¿
- * iMode                    ¼ÓÃÜËã·¨Ä£Ê½  2 H  00 ¨C ECB 01 ¨C CBC
- * pcTkType                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAÃÜÔ¿µÄ±£»¤ÃÜÔ¿ÀàĞÍ 000 ¨C KEK;   109 ¨C MDK;
- * iTkIndex                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAµÄ±£»¤ÃÜÔ¿Ë÷Òı
- * pcTk_Lmk                 ÓÃÓÚ¼ÓÃÜ±£»¤RSAµÄ±£»¤ÃÜÔ¿ÃÜÎÄ
- * iTkDeriveNumber          ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı
- * pcTkDeriveData           ±£»¤ÃÜÔ¿·ÖÉ¢Òò×Ó
- * iRsaKeyIndex             ±»µ¼³öÃÜÔ¿Ë÷ÒıºÅ
- * pucRsaKeyTag             RSAÃÜÔ¿±êÇ©
- * iRsaKeyTagLen            RSAÃÜÔ¿±êÇ©³¤¶È
- * pucPublicKey             ¹«Ô¿£¬ ASN.1 ¸ñÊ½DER ±àÂë£¨Ä££¬Ö¸ÊıĞòÁĞ)
- * iPublicKeyLen            ¹«Ô¿Êı¾İ³¤¶È
- * pucPrivateKey_d          Ë½Ô¿Ö¸Êıd  n B  Ë½Ô¿Ö¸ÊıdÃÜÎÄ
- * iPrivateKey_dLen         Ë½Ô¿Ö¸Êıd³¤¶È  4 N  Ë½Ô¿Ö¸ÊıdÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
- * pucPrivateKey_p          Ë½Ô¿·ÖÁ¿P  n B  Ë½Ô¿·ÖÁ¿pÃÜÎÄ
- * iPrivateKey_pLen         Ë½Ô¿·ÖÁ¿P³¤¶È  4 N  Ë½Ô¿·ÖÁ¿pÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
- * pucPrivateKey_q          Ë½Ô¿·ÖÁ¿Q  n B  Ë½Ô¿·ÖÁ¿qÃÜÎÄ
- * iPrivateKey_qLen         Ë½Ô¿·ÖÁ¿Q³¤¶È  4 N  Ë½Ô¿·ÖÁ¿qÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
- * pucPrivateKey_dp         Ë½Ô¿·ÖÁ¿dP  n B  Ë½Ô¿·ÖÁ¿dPÃÜÎÄ
- * iPrivateKey_dpLen        Ë½Ô¿·ÖÁ¿dP³¤¶È  4 N  Ë½Ô¿·ÖÁ¿dPÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
- * pucPrivateKey_dq         Ë½Ô¿·ÖÁ¿dQ  n B  Ë½Ô¿·ÖÁ¿dQÃÜÎÄ
- * iPrivateKey_dqLen        Ë½Ô¿·ÖÁ¿dQ³¤¶È  4 N  Ë½Ô¿·ÖÁ¿dQÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
- * pucPrivateKey_qInv       Ë½Ô¿·ÖÁ¿qInv  n B  Ë½Ô¿·ÖÁ¿qInvÃÜÎÄ
- * iPrivateKey_qInvLen      Ë½Ô¿·ÖÁ¿qInv³¤¶È  4 N  Ë½Ô¿·ÖÁ¿qInvÃÜÎÄ³¤¶È£¬×Ö½ÚÊı
+ * HSM_RSA_ImportByTk     ä¿æŠ¤å¯†é’¥ï¼ˆå¯¹ç§°ï¼‰åŠ å¯†å¯¼å…¥ä¸€å¯¹RSAå¯†é’¥
+ * iMode                    åŠ å¯†ç®—æ³•æ¨¡å¼  2 H  00 â€“ ECB 01 â€“ CBC
+ * pcTkType                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAå¯†é’¥çš„ä¿æŠ¤å¯†é’¥ç±»å‹ 000 â€“ KEK;   109 â€“ MDK;
+ * iTkIndex                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAçš„ä¿æŠ¤å¯†é’¥ç´¢å¼•
+ * pcTk_Lmk                 ç”¨äºåŠ å¯†ä¿æŠ¤RSAçš„ä¿æŠ¤å¯†é’¥å¯†æ–‡
+ * iTkDeriveNumber          ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°
+ * pcTkDeriveData           ä¿æŠ¤å¯†é’¥åˆ†æ•£å› å­
+ * iRsaKeyIndex             è¢«å¯¼å‡ºå¯†é’¥ç´¢å¼•å·
+ * pucRsaKeyTag             RSAå¯†é’¥æ ‡ç­¾
+ * iRsaKeyTagLen            RSAå¯†é’¥æ ‡ç­¾é•¿åº¦
+ * pucPublicKey             å…¬é’¥ï¼Œ ASN.1 æ ¼å¼DER ç¼–ç ï¼ˆæ¨¡ï¼ŒæŒ‡æ•°åºåˆ—)
+ * iPublicKeyLen            å…¬é’¥æ•°æ®é•¿åº¦
+ * pucPrivateKey_d          ç§é’¥æŒ‡æ•°d  n B  ç§é’¥æŒ‡æ•°då¯†æ–‡
+ * iPrivateKey_dLen         ç§é’¥æŒ‡æ•°dé•¿åº¦  4 N  ç§é’¥æŒ‡æ•°då¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
+ * pucPrivateKey_p          ç§é’¥åˆ†é‡P  n B  ç§é’¥åˆ†é‡på¯†æ–‡
+ * iPrivateKey_pLen         ç§é’¥åˆ†é‡Pé•¿åº¦  4 N  ç§é’¥åˆ†é‡på¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
+ * pucPrivateKey_q          ç§é’¥åˆ†é‡Q  n B  ç§é’¥åˆ†é‡qå¯†æ–‡
+ * iPrivateKey_qLen         ç§é’¥åˆ†é‡Qé•¿åº¦  4 N  ç§é’¥åˆ†é‡qå¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
+ * pucPrivateKey_dp         ç§é’¥åˆ†é‡dP  n B  ç§é’¥åˆ†é‡dPå¯†æ–‡
+ * iPrivateKey_dpLen        ç§é’¥åˆ†é‡dPé•¿åº¦  4 N  ç§é’¥åˆ†é‡dPå¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
+ * pucPrivateKey_dq         ç§é’¥åˆ†é‡dQ  n B  ç§é’¥åˆ†é‡dQå¯†æ–‡
+ * iPrivateKey_dqLen        ç§é’¥åˆ†é‡dQé•¿åº¦  4 N  ç§é’¥åˆ†é‡dQå¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
+ * pucPrivateKey_qInv       ç§é’¥åˆ†é‡qInv  n B  ç§é’¥åˆ†é‡qInvå¯†æ–‡
+ * iPrivateKey_qInvLen      ç§é’¥åˆ†é‡qInvé•¿åº¦  4 N  ç§é’¥åˆ†é‡qInvå¯†æ–‡é•¿åº¦ï¼Œå­—èŠ‚æ•°
  */
 
 int HSM_RSA_ImportByTk(
@@ -2386,15 +2392,15 @@ int HSM_RSA_ImportByTk(
     *p ++ = 'T';
     *p ++ = 'S';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½ ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ±£»¤ÃÜÔ¿µÄÃÜÔ¿ÀàĞÍ ***/
+    /*** ä¿æŠ¤å¯†é’¥çš„å¯†é’¥ç±»å‹ ***/
     memcpy(p, pcTkType, 3);
     p += 3;
 
-    /*** ±£»¤ÃÜÔ¿ÃÜÔ¿ ***/
+    /*** ä¿æŠ¤å¯†é’¥å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iTkIndex, pcTk_Lmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -2403,7 +2409,7 @@ int HSM_RSA_ImportByTk(
     }
     p += rv;
 
-    /*** ±£»¤ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** ä¿æŠ¤å¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData( 1, iTkDeriveNumber, pcTkDeriveData, (char*)p );
     if (rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -2412,7 +2418,7 @@ int HSM_RSA_ImportByTk(
     }
     p += rv;
 
-    /*** ±»µ¼ÈëµÄÃÜÔ¿Ë÷Òı, 4N ***/
+    /*** è¢«å¯¼å…¥çš„å¯†é’¥ç´¢å¼•, 4N ***/
     if (iRsaKeyIndex<=0)
     {
         iRsaKeyIndex = 9999;
@@ -2426,54 +2432,54 @@ int HSM_RSA_ImportByTk(
         TASS_SPRINTF((char *)p, 3, "%02d", iRsaKeyTagLen);
         p += 2;
 
-        /*** RSAÃÜÔ¿±êÇ©  ***/
+        /*** RSAå¯†é’¥æ ‡ç­¾  ***/
         memcpy(p, pucRsaKeyTag, iRsaKeyTagLen);
         p += iRsaKeyTagLen;
     }
 
-    /*** Òªµ¼ÈëµÄRSAÃÜÔ¿µÄ¹«Ô¿Ã÷ÎÄ, ASN.1 ¸ñÊ½DER ±àÂë£¨Ä££¬Ö¸ÊıĞòÁĞ£©***/
+    /*** è¦å¯¼å…¥çš„RSAå¯†é’¥çš„å…¬é’¥æ˜æ–‡, ASN.1 æ ¼å¼DER ç¼–ç ï¼ˆæ¨¡ï¼ŒæŒ‡æ•°åºåˆ—ï¼‰***/
     memcpy(p, pucPublicKey, iPublicKeyLen);
     p += iPublicKeyLen;
 
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_dLen);
     p += 4;
 
-    /*** Ë½Ô¿Ö¸Êıd ***/
+    /*** ç§é’¥æŒ‡æ•°d ***/
     memcpy(p, pucPrivateKey_d, iPrivateKey_dLen);
     p += iPrivateKey_dLen;
 
-    /*** Ë½Ô¿·ÖÁ¿P ***/
+    /*** ç§é’¥åˆ†é‡P ***/
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_pLen);
     p += 4;
     memcpy(p, pucPrivateKey_p, iPrivateKey_pLen);
     p += iPrivateKey_pLen;
 
-    /*** Ë½Ô¿·ÖÁ¿Q ***/
+    /*** ç§é’¥åˆ†é‡Q ***/
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_qLen);
     p += 4;
     memcpy(p, pucPrivateKey_q, iPrivateKey_qLen);
     p += iPrivateKey_qLen;
 
-    /*** Ë½Ô¿·ÖÁ¿dP ***/
+    /*** ç§é’¥åˆ†é‡dP ***/
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_dpLen);
     p += 4;
     memcpy(p, pucPrivateKey_dp, iPrivateKey_dpLen);
     p += iPrivateKey_dpLen;
 
-    /*** Ë½Ô¿·ÖÁ¿dQ ***/
+    /*** ç§é’¥åˆ†é‡dQ ***/
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_dqLen);
     p += 4;
     memcpy(p, pucPrivateKey_dq, iPrivateKey_dqLen);
     p += iPrivateKey_dqLen;
 
-    /*** Ë½Ô¿·ÖÁ¿qInv ***/
+    /*** ç§é’¥åˆ†é‡qInv ***/
     TASS_SPRINTF((char *)p, 5, "%04d", iPrivateKey_qInvLen);
     p += 4;
     memcpy(p, pucPrivateKey_qInv, iPrivateKey_qInvLen);
     p += iPrivateKey_qInvLen;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    //rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -2483,7 +2489,7 @@ int HSM_RSA_ImportByTk(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** Ë½Ô¿³¤¶È ***/
+    /*** ç§é’¥é•¿åº¦ ***/
     len = Tools_ConvertDecBuf2Int(p, 4);
     p += 4;
     if(piPrivateKeyLen_Lmk)
@@ -2491,7 +2497,7 @@ int HSM_RSA_ImportByTk(
         *piPrivateKeyLen_Lmk = len;
     }
 
-    /*** Ë½Ô¿Êı¾İ  ***/
+    /*** ç§é’¥æ•°æ®  ***/
     if(pucPrivateKey_Lmk)
     {
         memcpy(pucPrivateKey_Lmk, p, len);

@@ -22,7 +22,7 @@
 #endif
 
 #include "hsmapi_define.h"
-#include "hsmapi_tcpcom.h"
+//#include "hsmapi_tcpcom.h"
 #include "hsmapi_init.h"
 #include "hsmapi_log.h"
 

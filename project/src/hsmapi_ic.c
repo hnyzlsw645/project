@@ -2,7 +2,7 @@
 |    hsmapi_ic.c                                                        |
 |    Version :     1.0                                                  |
 |    Author:       Luo Cangjian                                         |
-|    Description:  SJJ1310ÃÜÂë»ú½Ó¿Ú½ğÈÚIC¿¨Ó¦ÓÃÖ÷»úÃüÁîº¯Êı            |
+|    Description:  SJJ1310å¯†ç æœºæ¥å£é‡‘èICå¡åº”ç”¨ä¸»æœºå‘½ä»¤å‡½æ•°            |
 |                                                                       |
 |    Copyright :   Beijing JN TASS Technology Co., Ltd.                 |
 |    data:         2015-06-03. Create                                   |
@@ -22,7 +22,7 @@
 #include "hsmapi_log.h"
 #include "hsmapi_tools.h"
 #include "hsmapi_init.h"
-#include "hsmapi_tcpcom.h"
+#include "hsmsocket.h"
 #include "hsmapi_ic.h"
 
 int HSM_IC_PutPlainKey(
@@ -47,11 +47,11 @@ int HSM_IC_PutPlainKey(
     *p ++= 'A';
     *p ++= 'M';
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK;  ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK;  ***/
     memcpy(p, pcKeyType, 3);
     p += 3;
 
-    /*** ÃÜÔ¿±êÊ¶(LMK), 1A, Z/X/Y/U/T/P/L/R  ***/
+    /*** å¯†é’¥æ ‡è¯†(LMK), 1A, Z/X/Y/U/T/P/L/R  ***/
     *p ++= cKeyScheme;
     if (cKeyScheme == 'Z')
     {
@@ -66,15 +66,15 @@ int HSM_IC_PutPlainKey(
         len = 32;
     }
 
-    /*** ÃÜÔ¿ºÏ³É·½Ê½, 2H, 00  ***/
+    /*** å¯†é’¥åˆæˆæ–¹å¼, 2H, 00  ***/
     *p ++= '0';
     *p ++= '0';
 
-    /*** ÃÜÔ¿³É·İ¸öÊı, 2H, ¹Ì¶¨Îª2 ***/
+    /*** å¯†é’¥æˆä»½ä¸ªæ•°, 2H, å›ºå®šä¸º2 ***/
     *p ++= '0';
     *p ++= '2';
 
-    /*** ÃÜÔ¿³É·İ1£¬16H/32H/48H ***/
+    /*** å¯†é’¥æˆä»½1ï¼Œ16H/32H/48H ***/
     plainlen = strlen(pcPlainKey);
     if (len != plainlen)
     {
@@ -85,11 +85,11 @@ int HSM_IC_PutPlainKey(
     memcpy(p, pcPlainKey, plainlen);
     p += plainlen;
 
-    /*** ÃÜÔ¿³É·İ2£¬16H/32H/48H, È«0 ***/
+    /*** å¯†é’¥æˆä»½2ï¼Œ16H/32H/48H, å…¨0 ***/
     memset(p, '0', plainlen);
     p += plainlen;
 
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIdx, pcKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -99,7 +99,9 @@ int HSM_IC_PutPlainKey(
     p += rv;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -109,7 +111,7 @@ int HSM_IC_PutPlainKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÔ¿ÃÜÎÄ, 16H/1A+32H/1A+48H ***/
+    /*** å¯†é’¥å¯†æ–‡, 16H/1A+32H/1A+48H ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if(pcKeyCipherByLmk)
     {
@@ -117,7 +119,7 @@ int HSM_IC_PutPlainKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if(pcKeyCv)
     {
         strncpy(pcKeyCv, (char *)p, 16);
@@ -146,12 +148,14 @@ int HSM_IC_GetKeyInfo(
     *p ++ = 'K';
     *p ++ = 'G';
 
-    /*** ÃÜÔ¿Ë÷ÒıºÅ, 4N ***/
+    /*** å¯†é’¥ç´¢å¼•å·, 4N ***/
     TASS_SPRINTF((char*)p, 5, "%04d", iKeyIdx);
     p += 4;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -161,11 +165,11 @@ int HSM_IC_GetKeyInfo(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H ***/
+    /*** å¯†é’¥ç±»å‹, 3H ***/
     strncpy(pcKeyType, (char *)p, 3);
     p += 3;
 
-    /*** ÃÜÔ¿Ëã·¨±êÊ¶, 1A ***/
+    /*** å¯†é’¥ç®—æ³•æ ‡è¯†, 1A ***/
     *pcKeyScheme = *p;
     p ++;
 
@@ -173,19 +177,19 @@ int HSM_IC_GetKeyInfo(
     strncpy(pcKeyCv, (char *)p, 16);
     p += 16;
 
-    /*** ÃÜÔ¿±êÇ©³¤¶È, 2N ***/
+    /*** å¯†é’¥æ ‡ç­¾é•¿åº¦, 2N ***/
     len = Tools_ConvertDecBuf2Int(p, 2);
     p += 2;
 
-    /*** ÃÜÔ¿±êÇ©, nA ***/
+    /*** å¯†é’¥æ ‡ç­¾, nA ***/
     strncpy(pcKeyLabel, (char *)p, len);
     p += len;
 
-    /*** ÃÜÔ¿×îºó¸üĞÂÊ±¼ä³¤¶È, 2N ***/
+    /*** å¯†é’¥æœ€åæ›´æ–°æ—¶é—´é•¿åº¦, 2N ***/
     len = Tools_ConvertDecBuf2Int(p, 2);
     p += 2;
 
-    /*** ÃÜÔ¿×îºó¸üĞÂÊ±¼ä±êÇ©, nA*/
+    /*** å¯†é’¥æœ€åæ›´æ–°æ—¶é—´æ ‡ç­¾, nA*/
     strncpy(pcTime, (char *)p, len);
     p += len;
 
@@ -212,14 +216,14 @@ int HSM_IC_GenerateNewKey(
     *p ++ = 'K';
     *p ++ = 'R';
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     memcpy(p, pcKeyType, 3);
     p += 3;
 
-    /*** ÃÜÔ¿±êÊ¶(LMK), 1A, Z/X/Y/U/T/P/L/R ***/
+    /*** å¯†é’¥æ ‡è¯†(LMK), 1A, Z/X/Y/U/T/P/L/R ***/
     *p ++ = cKeyScheme;
 
-    /*** ÄÚ²¿´æ´¢µÄÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iKeyIdx, pcKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -229,7 +233,9 @@ int HSM_IC_GenerateNewKey(
     p += rv;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -239,7 +245,7 @@ int HSM_IC_GenerateNewKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÔ¿ÃÜÎÄ, 16H/1A+32H/1A+48H ***/
+    /*** å¯†é’¥å¯†æ–‡, 16H/1A+32H/1A+48H ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if(pcKeyCipherByLmk)
     {
@@ -247,7 +253,7 @@ int HSM_IC_GenerateNewKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H/32H ***/
+    /*** æ ¡éªŒå€¼, 16H/32H ***/
     if(pcKeyCv)
     {
         strncpy(pcKeyCv, (char *)p, len);
@@ -282,11 +288,11 @@ int HSM_IC_DeriveNewKey(
     *p ++ = 'K';
     *p ++ = 'D';
 
-    /*** Ô´ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; ***/
+    /*** æºå¯†é’¥ç±»å‹, 3H, 109â€“MDK; ***/
     memcpy(p, pcSrcKeyType, 3);
     p += 3;
 
-    /*** Ô´ÃÜÔ¿ ***/
+    /*** æºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if (rv == HAR_PARAM_VALUE)
     {
@@ -295,20 +301,20 @@ int HSM_IC_DeriveNewKey(
     }
     p += rv;
 
-    /*** ×ÓÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å­å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     memcpy(p, pcDstKeyType, 3);
     p += 3;
 
-    /*** ×ÓÃÜÔ¿±êÊ¶(LMK), 1A, X/U/P/L/R ***/
+    /*** å­å¯†é’¥æ ‡è¯†(LMK), 1A, X/U/P/L/R ***/
     *p ++ = cDstKeyScheme;
 
-    /*** ·ÖÉ¢Ëã·¨Ä£Ê½, 1H
-     0-PBOC×ÓÃÜÔ¿·ÖÉ¢Ëã·¨,Ã¿¼¶·ÖÉ¢Òò×ÓÎª8×Ö½Ú£¨16H£©
-     1-ECBÄ£Ê½¼ÓÃÜ16×Ö½Ú·ÖÉ¢Òò×Ó,Ã¿¼¶·ÖÉ¢Òò×ÓÎª16×Ö½Ú£¨32H£© ***/
+    /*** åˆ†æ•£ç®—æ³•æ¨¡å¼, 1H
+     0-PBOCå­å¯†é’¥åˆ†æ•£ç®—æ³•,æ¯çº§åˆ†æ•£å› å­ä¸º8å­—èŠ‚ï¼ˆ16Hï¼‰
+     1-ECBæ¨¡å¼åŠ å¯†16å­—èŠ‚åˆ†æ•£å› å­,æ¯çº§åˆ†æ•£å› å­ä¸º16å­—èŠ‚ï¼ˆ32Hï¼‰ ***/
     TASS_SPRINTF((char *)p, 2, "%d", iDeriveMode);
     p += 1;
 
-    /*** ·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H ***/
+    /*** åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H ***/
     rv = Tools_AddFieldDeriveData(iDeriveMode, iDeriveNumber, pcDeriveFactor, p);
     if(rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -316,7 +322,7 @@ int HSM_IC_DeriveNewKey(
         return rv;
     }
 
-    /*** ÄÚ²¿´æ´¢µÄ×ÓÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å­å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iDstKeyIdx, pcDstKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -326,7 +332,9 @@ int HSM_IC_DeriveNewKey(
     p += rv;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -336,7 +344,7 @@ int HSM_IC_DeriveNewKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÔ¿ÃÜÎÄ, 16H/1A+32H/1A+48H ***/
+    /*** å¯†é’¥å¯†æ–‡, 16H/1A+32H/1A+48H ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if(pcDstKeyCipherByLmk)
     {
@@ -344,7 +352,7 @@ int HSM_IC_DeriveNewKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if(pcDstKeyCv)
     {
         strncpy(pcDstKeyCv, (char *)p, 16);
@@ -382,15 +390,15 @@ int HSM_IC_ExportCipherKey(
     *p ++ = 'S';
     *p ++ = 'H';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½, 2H, 00-ECB, 01-CBC; ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼, 2H, 00-ECB, 01-CBC; ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iEncryptMode);
     p += 2;
 
-    /*** Ô´ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; ***/
+    /*** æºå¯†é’¥ç±»å‹, 3H, 109â€“MDK; ***/
     memcpy(p, pcSrcKeyType, 3);
     p += 3;
 
-    /*** Ô´ÃÜÔ¿ ***/
+    /*** æºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -399,7 +407,7 @@ int HSM_IC_ExportCipherKey(
     }
     p += rv;
 
-    /*** Ô´ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** æºå¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iSrcKeyDeriveNum, pcSrcKeyDeriveData, p);
     if(rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -408,7 +416,7 @@ int HSM_IC_ExportCipherKey(
     }
     p += rv;
 
-    /*** Ô´ÃÜÔ¿»á»°ÃÜÔ¿ÀàĞÍ¼°»á»°ÃÜÔ¿Òò×Ó ***/
+    /*** æºå¯†é’¥ä¼šè¯å¯†é’¥ç±»å‹åŠä¼šè¯å¯†é’¥å› å­ ***/
     rv = Tools_AddFieldSessionData(iSrcSessionMode, pcSrcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -418,11 +426,11 @@ int HSM_IC_ExportCipherKey(
     }
     p += rv;
 
-    /*** µ¼³öÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯¼å‡ºå¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     memcpy(p, pcDstKeyType, 3);
     p += 3;
 
-    /*** µ¼³öÃÜÔ¿ ***/
+    /*** å¯¼å‡ºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iDstKeyIdx, pcDstKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -431,7 +439,7 @@ int HSM_IC_ExportCipherKey(
     }
     p += rv;
 
-    /*** ·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H ***/
+    /*** åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H ***/
     rv = Tools_AddFieldDeriveData(1, iDstKeyDeriveNumber, pcDstKeyDeriveFactor, p);
     if(rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -440,7 +448,7 @@ int HSM_IC_ExportCipherKey(
     }
     p += rv;
 
-    /*** ÃÜÔ¿Í·³¤¶È, 2H ***/
+    /*** å¯†é’¥å¤´é•¿åº¦, 2H ***/
     if (!pcDstKeyHeader)
     {
         len = 0;
@@ -459,7 +467,7 @@ int HSM_IC_ExportCipherKey(
     TASS_SPRINTF((char*)p, 3, "%02d", len / 2);
     p += 2;
 
-    /*** ÃÜÔ¿Í·, n*2H ***/
+    /*** å¯†é’¥å¤´, n*2H ***/
     memcpy(p, pcDstKeyHeader, len);
     p += len;
 
@@ -474,18 +482,18 @@ int HSM_IC_ExportCipherKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÎÄ³¤¶È, 4H ***/
+    /*** å¯†æ–‡é•¿åº¦, 4H ***/
     len = Tools_ConvertHexBuf2Int(p, 4) * 2;
     p += 4;
 
-    /*** ÃÜÔ¿ÃÜÎÄ, n*2H ***/
+    /*** å¯†é’¥å¯†æ–‡, n*2H ***/
     if(pcCipherDstKey)
     {
         strncpy(pcCipherDstKey, p, len);
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if(pcDstKeyCv)
     {
         strncpy(pcDstKeyCv, (char *)p, 16);
@@ -519,15 +527,15 @@ int HSM_IC_ImportCipherKey(
     *p ++ = 'S';
     *p ++ = 'I';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½, 2H, 00-ECB, 01-CBC; ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼, 2H, 00-ECB, 01-CBC; ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iEncryptMode);
     p += 2;
 
-    /*** Ô´ÃÜÔ¿ÀàĞÍ, 3H ***/
+    /*** æºå¯†é’¥ç±»å‹, 3H ***/
     memcpy(p, pcSrcKeyType, 3);
     p += 3;
 
-    /*** Ô´ÃÜÔ¿ ***/
+    /*** æºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -536,7 +544,7 @@ int HSM_IC_ImportCipherKey(
     }
     p += rv;
 
-    /*** Ô´ÃÜÔ¿·ÖÉ¢¼¶Êı¼°·ÖÉ¢Òò×Ó, 2H+n*32H ***/
+    /*** æºå¯†é’¥åˆ†æ•£çº§æ•°åŠåˆ†æ•£å› å­, 2H+n*32H ***/
     rv = Tools_AddFieldDeriveData(1, iSrcKeyDeriveNum, pcSrcKeyDeriveData, p);
     if(rv == HAR_PARAM_DERIVE_DATA)
     {
@@ -545,7 +553,7 @@ int HSM_IC_ImportCipherKey(
     }
     p += rv;
 
-    /*** Ô´ÃÜÔ¿»á»°ÃÜÔ¿ÀàĞÍ¼°»á»°ÃÜÔ¿Òò×Ó ***/
+    /*** æºå¯†é’¥ä¼šè¯å¯†é’¥ç±»å‹åŠä¼šè¯å¯†é’¥å› å­ ***/
     rv = Tools_AddFieldSessionData(iSrcSessionMode, pcSrcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -555,14 +563,14 @@ int HSM_IC_ImportCipherKey(
     }
     p += rv;
 
-    /*** µ¼ÈëÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯¼å…¥å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     memcpy(p, pcDstKeyType, 3);
     p += 3;
 
-    /*** µ¼ÈëÃÜÔ¿±êÊ¶(LMK), 1A, Z/X/Y/U/T/P/L/R ***/
+    /*** å¯¼å…¥å¯†é’¥æ ‡è¯†(LMK), 1A, Z/X/Y/U/T/P/L/R ***/
     *p ++ = cDstKeyScheme;
 
-    /*** µ¼ÈëÃÜÔ¿ÃÜÎÄ³¤¶È, 4H ***/
+    /*** å¯¼å…¥å¯†é’¥å¯†æ–‡é•¿åº¦, 4H ***/
     if (!pcDstKeyCipherByTk)
     {
         len = 0;
@@ -581,11 +589,11 @@ int HSM_IC_ImportCipherKey(
     TASS_SPRINTF((char*)p, 5, "%04X", len / 2);
     p += 4;
 
-    /*** µ¼ÈëÃÜÔ¿ÃÜÎÄ, n*2H ***/
+    /*** å¯¼å…¥å¯†é’¥å¯†æ–‡, n*2H ***/
     memcpy(p, pcDstKeyCipherByTk, len);
     p += len;
 
-    /*** ÄÚ²¿´æ´¢µÄµ¼ÈëÃÜÔ¿, ÃÜÔ¿Ë÷Òı¡¢±êÇ©³¤¶È¡¢±êÇ© ***/
+    /*** å†…éƒ¨å­˜å‚¨çš„å¯¼å…¥å¯†é’¥, å¯†é’¥ç´¢å¼•ã€æ ‡ç­¾é•¿åº¦ã€æ ‡ç­¾ ***/
     rv = Tools_AddFieldSavedKey(iDstKeyIdx, pcDstKeyLabel, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -594,7 +602,7 @@ int HSM_IC_ImportCipherKey(
     }
     p += rv;
 
-    /*** ÃÜÔ¿Í·³¤¶È, 2H ***/
+    /*** å¯†é’¥å¤´é•¿åº¦, 2H ***/
     if (!pcDstKeyHeader)
     {
         len = 0;
@@ -613,16 +621,16 @@ int HSM_IC_ImportCipherKey(
     TASS_SPRINTF((char*)p, 3, "%02d", len / 2);
     p += 2;
 
-    /*** ÃÜÔ¿Í·, n*2H ***/
+    /*** å¯†é’¥å¤´, n*2H ***/
     memcpy( p, pcDstKeyHeader, len );
     p += len;
 
     if(cExpandFlg == 'P')
     {
-        /*** À©Õ¹±êÊ¶ ***/
+        /*** æ‰©å±•æ ‡è¯† ***/
         *p ++ = 'P';
 
-        /*** pad ±êÊ¶ ***/
+        /*** pad æ ‡è¯† ***/
         memcpy(p, pcPad, 2);
         p += 2;
 
@@ -633,13 +641,15 @@ int HSM_IC_ImportCipherKey(
             p += strlen(pcIV);
         }
 
-        /*** Ğ£ÑéÖµ ***/
+        /*** æ ¡éªŒå€¼ ***/
         memcpy(p, pcSrcKeyCv, strlen(pcSrcKeyCv));
         p += strlen(pcSrcKeyCv);
     }
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -649,7 +659,7 @@ int HSM_IC_ImportCipherKey(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ÃÜÔ¿ÃÜÎÄ, 16H/1A+32H/1A+48H ***/
+    /*** å¯†é’¥å¯†æ–‡, 16H/1A+32H/1A+48H ***/
     len = Tools_GetFieldKeyLength((char *)p);
     if(pcDstKeyCipherByLmk)
     {
@@ -657,7 +667,7 @@ int HSM_IC_ImportCipherKey(
     }
     p += len;
 
-    /*** Ğ£ÑéÖµ, 16H ***/
+    /*** æ ¡éªŒå€¼, 16H ***/
     if(pcDstKeyCv)
     {
         strncpy(pcDstKeyCv, p, 16);
@@ -683,10 +693,10 @@ int HSM_IC_VerifyArqc(
     *p ++ = 'K';
     *p ++ = '6';
 
-    /*** Ä£Ê½±êÖ¾, 1H, 0 ¨C ARQC ÑéÖ¤ ***/
+    /*** æ¨¡å¼æ ‡å¿—, 1H, 0 â€“ ARQC éªŒè¯ ***/
     *p ++ = '0';
 
-    /*** MDKÔ´ÃÜÔ¿ ***/
+    /*** MDKæºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -695,7 +705,7 @@ int HSM_IC_VerifyArqc(
     }
     p += rv;
 
-    /*** PANÓò£¬16H ***/
+    /*** PANåŸŸï¼Œ16H ***/
     rv = Tools_AddFieldPan(PANFMT_DISPER, pcPAN, p);
     if(rv == HAR_PARAM_PAN)
     {
@@ -708,7 +718,7 @@ int HSM_IC_VerifyArqc(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** ½»Ò×Êı¾İ³¤¶È, 2H ***/
+    /*** äº¤æ˜“æ•°æ®é•¿åº¦, 2H ***/
     if (!pcData)
     {
         len = 0;
@@ -720,11 +730,11 @@ int HSM_IC_VerifyArqc(
     TASS_SPRINTF((char*)p, 3, "%02X", len / 2);
     p += 2;
 
-    /*** ½»Ò×Êı¾İ, n*2H ***/
+    /*** äº¤æ˜“æ•°æ®, n*2H ***/
     memcpy(p, pcData, len);
     p += len;
 
-    /*** ·Ö¸ô·û ***/
+    /*** åˆ†éš”ç¬¦ ***/
     *p ++ = ';';
 
     /*** ARQC, 16H ***/
@@ -732,7 +742,9 @@ int HSM_IC_VerifyArqc(
     p += 16;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -741,7 +753,7 @@ int HSM_IC_VerifyArqc(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ARQCÑéÖ¤Ê§°Ü ***/
+    /*** ARQCéªŒè¯å¤±è´¥ ***/
     if (rv == 1)
     {
         /*** ARQC, 16H ***/
@@ -770,10 +782,10 @@ int HSM_IC_GenerateArpc(
     *p ++ = 'K';
     *p ++ = '6';
 
-    /*** Ä£Ê½±êÖ¾, 1H, 2 ¨C ²úÉúARPC ***/
+    /*** æ¨¡å¼æ ‡å¿—, 1H, 2 â€“ äº§ç”ŸARPC ***/
     *p ++ = '2';
 
-    /*** MDKÔ´ÃÜÔ¿ ***/
+    /*** MDKæºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -782,7 +794,7 @@ int HSM_IC_GenerateArpc(
     }
     p += rv;
 
-    /*** PANÓò£¬16H ***/
+    /*** PANåŸŸï¼Œ16H ***/
     rv = Tools_AddFieldPan(PANFMT_DISPER, pcPAN, p);
     if(rv == HAR_PARAM_PAN)
     {
@@ -804,7 +816,9 @@ int HSM_IC_GenerateArpc(
     p += 4;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -840,7 +854,7 @@ int HSM_IC_EncryptPbocScript(
     *p ++ = 'K';
     *p ++ = '2';
 
-    /*** MDKÔ´ÃÜÔ¿ ***/
+    /*** MDKæºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -849,7 +863,7 @@ int HSM_IC_EncryptPbocScript(
     }
     p += rv;
 
-    /*** PANÓò£¬16H ***/
+    /*** PANåŸŸï¼Œ16H ***/
     rv = Tools_AddFieldPan(PANFMT_DISPER, pcPAN, p);
     if(rv == HAR_PARAM_PAN)
     {
@@ -862,7 +876,7 @@ int HSM_IC_EncryptPbocScript(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** ½»Ò×Êı¾İ³¤¶È, 3H ***/
+    /*** äº¤æ˜“æ•°æ®é•¿åº¦, 3H ***/
     if (!pcData)
     {
         len = 0;
@@ -875,12 +889,14 @@ int HSM_IC_EncryptPbocScript(
     TASS_SPRINTF((char*)p, 4, "%03X", len / 2);
     p += 3;
 
-    /*** ½»Ò×Êı¾İ, n*2H ***/
+    /*** äº¤æ˜“æ•°æ®, n*2H ***/
     memcpy(p, pcData, len);
     p += len;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -916,7 +932,7 @@ int HSM_IC_GeneratePbocScriptMac(
     *p ++ = 'K';
     *p ++ = '4';
 
-    /*** MDKÔ´ÃÜÔ¿ ***/
+    /*** MDKæºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -925,7 +941,7 @@ int HSM_IC_GeneratePbocScriptMac(
     }
     p += rv;
 
-    /*** PANÓò£¬16H ***/
+    /*** PANåŸŸï¼Œ16H ***/
     rv = Tools_AddFieldPan(PANFMT_DISPER, pcPAN, p);
     if(rv == HAR_PARAM_PAN)
     {
@@ -938,7 +954,7 @@ int HSM_IC_GeneratePbocScriptMac(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** ½»Ò×Êı¾İ³¤¶È, 3H ***/
+    /*** äº¤æ˜“æ•°æ®é•¿åº¦, 3H ***/
     if (!pcData)
     {
         len = 0;
@@ -951,12 +967,14 @@ int HSM_IC_GeneratePbocScriptMac(
     TASS_SPRINTF((char*)p, 4, "%03X", len/2);
     p += 3;
 
-    /*** ½»Ò×Êı¾İ, n*2H ***/
+    /*** äº¤æ˜“æ•°æ®, n*2H ***/
     memcpy( p, pcData, len );
     p += len;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -994,15 +1012,15 @@ int HSM_IC_SymmKeyEncryptData(void *hSessionHandle,
     *p ++ = 'S';
     *p ++ = '3';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½£¬2H, 00¨CECB, 01¨CCBC ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼ï¼Œ2H, 00â€“ECB, 01â€“CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 000¨CKEK; 109¨CMDK; 309¨CMK-SMC; 00A¨CZEK; 011¨CKMC;  ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 000â€“KEK; 109â€“MDK; 309â€“MK-SMC; 00Aâ€“ZEK; 011â€“KMC;  ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcType);
     p += 3;
 
-    /*** ¼ÓÃÜÊı¾İµÄÃÜÔ¿ ***/
+    /*** åŠ å¯†æ•°æ®çš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1011,7 +1029,7 @@ int HSM_IC_SymmKeyEncryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** ·ÖÉ¢ ***/
+    /*** åˆ†æ•£ ***/
     if (!pcDeriveData)
     {
         len = 0;
@@ -1035,7 +1053,7 @@ int HSM_IC_SymmKeyEncryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿ ***/
+    /*** ä¼šè¯å¯†é’¥ ***/
     rv = Tools_AddFieldSessionData(iSessionKeyMode, pcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1045,11 +1063,11 @@ int HSM_IC_SymmKeyEncryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** PAD±êÊ¶, 2H ***/
+    /*** PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPadMode);
     p += 2;
 
-    /*** Êı¾İ³¤¶È, 4H ***/
+    /*** æ•°æ®é•¿åº¦, 4H ***/
     if (iInputLength > 1968)
     {
         LOG_ERROR("Parameter: iInputLength = [%d] is invalid, it must be less than 1968.", iInputLength);
@@ -1059,7 +1077,7 @@ int HSM_IC_SymmKeyEncryptData(void *hSessionHandle,
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /*** Êı¾İ, nB ***/
+    /*** æ•°æ®, nB ***/
     memcpy(p, pucInputData, iInputLength);
     p += iInputLength;
 
@@ -1132,15 +1150,15 @@ int HSM_IC_SymmKeyDecryptData(void *hSessionHandle,
     *p ++ = 'S';
     *p ++ = '4';
 
-    /*** ¼ÓÃÜËã·¨Ä£Ê½£¬2H, 00¨CECB, 01¨CCBC ***/
+    /*** åŠ å¯†ç®—æ³•æ¨¡å¼ï¼Œ2H, 00â€“ECB, 01â€“CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 000¨CKEK; 109¨CMDK; 309¨CMK-SMC; 00A¨CZEK; 011¨CKMC; ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 000â€“KEK; 109â€“MDK; 309â€“MK-SMC; 00Aâ€“ZEK; 011â€“KMC; ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcType);
     p += 3;
 
-    /*** ¼ÓÃÜÊı¾İµÄÃÜÔ¿ ***/
+    /*** åŠ å¯†æ•°æ®çš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1149,7 +1167,7 @@ int HSM_IC_SymmKeyDecryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** ·ÖÉ¢ ***/
+    /*** åˆ†æ•£ ***/
     if (!pcDeriveData)
     {
         len = 0;
@@ -1173,7 +1191,7 @@ int HSM_IC_SymmKeyDecryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿ ***/
+    /*** ä¼šè¯å¯†é’¥ ***/
     rv = Tools_AddFieldSessionData(iSessionKeyMode, pcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1183,11 +1201,11 @@ int HSM_IC_SymmKeyDecryptData(void *hSessionHandle,
     }
     p += rv;
 
-    /*** PAD±êÊ¶, 2H ***/
+    /*** PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPadMode);
     p += 2;
 
-    /*** Êı¾İ³¤¶È, 4H ***/
+    /*** æ•°æ®é•¿åº¦, 4H ***/
     if (iInputLength > 1984)
     {
         LOG_ERROR("Parameter: iInputLength = [%d] is invalid, it must be less than 1984.", iInputLength);
@@ -1197,7 +1215,7 @@ int HSM_IC_SymmKeyDecryptData(void *hSessionHandle,
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /*** Êı¾İ, nB ***/
+    /*** æ•°æ®, nB ***/
     memcpy(p, pucInputData, iInputLength);
     p += iInputLength;
 
@@ -1273,15 +1291,15 @@ int HSM_IC_SymmKeyTransferCipher(
     *p ++ = 'S';
     *p ++ = '5';
 
-    /*** Ô´ÃÜÔ¿¼ÓÃÜËã·¨Ä£Ê½£¬2H, 00¨CECB, 01¨CCBC ***/
+    /*** æºå¯†é’¥åŠ å¯†ç®—æ³•æ¨¡å¼ï¼Œ2H, 00â€“ECB, 01â€“CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iSrcEncMode);
     p += 2;
 
-    /*** Ô´ÃÜÔ¿ÃÜÔ¿ÀàĞÍ, 3H, 000¨CKEK; 109¨CMDK; 309¨CMK-SMC; 00A¨CZEK; 011¨CKMC;  ***/
+    /*** æºå¯†é’¥å¯†é’¥ç±»å‹, 3H, 000â€“KEK; 109â€“MDK; 309â€“MK-SMC; 00Aâ€“ZEK; 011â€“KMC;  ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcSrcKeyType);
     p += 3;
 
-    /*** ¼ÓÃÜÊı¾İµÄÔ´ÃÜÔ¿ ***/
+    /*** åŠ å¯†æ•°æ®çš„æºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1290,7 +1308,7 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /*** ·ÖÉ¢(Ô´ÃÜÔ¿) ***/
+    /*** åˆ†æ•£(æºå¯†é’¥) ***/
     if (!pcSrcDeriveData)
     {
         len = 0;
@@ -1314,7 +1332,7 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿(Ô´ÃÜÔ¿) ***/
+    /*** ä¼šè¯å¯†é’¥(æºå¯†é’¥) ***/
     rv = Tools_AddFieldSessionData(iSrcSessionKeyMode, pcSrcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1324,11 +1342,11 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /*** (Ô´ÃÜÔ¿)PAD±êÊ¶, 2H ***/
+    /*** (æºå¯†é’¥)PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iSrcPadMode);
     p += 2;
 
-    /*** (Ô´ÃÜÔ¿)IV, 16H/32H ***/
+    /*** (æºå¯†é’¥)IV, 16H/32H ***/
     if (iSrcEncMode == ENCRYPT_MODE_CBC)
     {
         if (!pcSrcIv)
@@ -1350,15 +1368,15 @@ int HSM_IC_SymmKeyTransferCipher(
         p += len;
     }
 
-    /*** Ä¿µÄÃÜÔ¿¼ÓÃÜËã·¨Ä£Ê½£¬2H, 00¨CECB, 01¨CCBC ***/
+    /*** ç›®çš„å¯†é’¥åŠ å¯†ç®—æ³•æ¨¡å¼ï¼Œ2H, 00â€“ECB, 01â€“CBC ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iDstEncMode);
     p += 2;
 
-    /*** Ä¿µÄÃÜÔ¿ÃÜÔ¿ÀàĞÍ, 3H, 000¨CKEK; 109¨CMDK; 309¨CMK-SMC; 00A¨CZEK; 011¨CKMC;  ***/
+    /*** ç›®çš„å¯†é’¥å¯†é’¥ç±»å‹, 3H, 000â€“KEK; 109â€“MDK; 309â€“MK-SMC; 00Aâ€“ZEK; 011â€“KMC;  ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcDstKeyType);
     p += 3;
 
-    /*** ¼ÓÃÜÊı¾İµÄÄ¿µÄÃÜÔ¿ ***/
+    /*** åŠ å¯†æ•°æ®çš„ç›®çš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iDstKeyIdx, pcDstKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1367,7 +1385,7 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /***  ·ÖÉ¢(Ä¿µÄÃÜÔ¿) ***/
+    /***  åˆ†æ•£(ç›®çš„å¯†é’¥) ***/
     if (!pcDstDeriveData)
     {
         len = 0;
@@ -1391,7 +1409,7 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿(Ä¿µÄÃÜÔ¿) ***/
+    /*** ä¼šè¯å¯†é’¥(ç›®çš„å¯†é’¥) ***/
     rv = Tools_AddFieldSessionData(iDstSessionKeyMode, pcDstSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1401,11 +1419,11 @@ int HSM_IC_SymmKeyTransferCipher(
     }
     p += rv;
 
-    /*** (Ä¿µÄÃÜÔ¿)PAD±êÊ¶, 2H ***/
+    /*** (ç›®çš„å¯†é’¥)PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iDstPadMode);
     p += 2;
 
-    /*** (Ä¿µÄÃÜÔ¿)IV, 16H/32H ***/
+    /*** (ç›®çš„å¯†é’¥)IV, 16H/32H ***/
     if (iDstEncMode == ENCRYPT_MODE_CBC)
     {
         if (!pcDstIv)
@@ -1427,7 +1445,7 @@ int HSM_IC_SymmKeyTransferCipher(
         p += len;
     }
 
-    /*** ÊäÈëÊı¾İ³¤¶È, 4H ***/
+    /*** è¾“å…¥æ•°æ®é•¿åº¦, 4H ***/
     if (iInputLength > 1984)
     {
         LOG_ERROR("Parameter: iInputLength = [%d] is invalid, it must be less than 1984.", iInputLength);
@@ -1437,12 +1455,14 @@ int HSM_IC_SymmKeyTransferCipher(
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /***  Êı¾İ, nB ***/
+    /***  æ•°æ®, nB ***/
     memcpy(p, pucInputData, iInputLength);
     p += iInputLength;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1487,19 +1507,19 @@ int HSM_IC_GeneralGenerateMac(
     *p ++ = 'S';
     *p ++ = '0';
 
-    /*** MACËã·¨Ä£Ê½ ***/
+    /*** MACç®—æ³•æ¨¡å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** MACÈ¡Öµ·½Ê½ ***/
+    /*** MACå–å€¼æ–¹å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%s", iMacType);
     p += 2;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcType);
     p += 3;
 
-    /*** ¼ÆËãMACµÄÃÜÔ¿ ***/
+    /*** è®¡ç®—MACçš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1508,7 +1528,7 @@ int HSM_IC_GeneralGenerateMac(
     }
     p += rv;
 
-    /*** ·ÖÉ¢ ***/
+    /*** åˆ†æ•£ ***/
     if (!pcDeriveData)
     {
         len = 0;
@@ -1532,7 +1552,7 @@ int HSM_IC_GeneralGenerateMac(
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿ ***/
+    /*** ä¼šè¯å¯†é’¥ ***/
     rv = Tools_AddFieldSessionData(iSessionKeyMode, pcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1542,15 +1562,15 @@ int HSM_IC_GeneralGenerateMac(
     }
     p += rv;
 
-    /*** PAD±êÊ¶, 2H ***/
+    /*** PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPadMode);
     p += 2;
 
-    /***  Êı¾İ³¤¶È, 4H ***/
+    /***  æ•°æ®é•¿åº¦, 4H ***/
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /***  Êı¾İ, nB ***/
+    /***  æ•°æ®, nB ***/
     memcpy(p, pcInputData, iInputLength);
     p += iInputLength;
 
@@ -1559,7 +1579,9 @@ int HSM_IC_GeneralGenerateMac(
     p += strlen(pcIV);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1582,7 +1604,7 @@ int HSM_IC_GeneralGenerateMac(
 
         if(iRspLen > len)
         {
-            /*** MACÃÜÎÄ 16H ***/
+            /*** MACå¯†æ–‡ 16H ***/
             if(pcMacCiher)
             {
                 strncpy(pcMacCiher, (char *)p, 16);
@@ -1620,19 +1642,19 @@ int HSM_IC_GenerateMac(
     *p ++ = 'S';
     *p ++ = '0';
 
-    /*** MACËã·¨Ä£Ê½ ***/
+    /*** MACç®—æ³•æ¨¡å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** MACÈ¡Öµ·½Ê½ ***/
+    /*** MACå–å€¼æ–¹å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02X", 8);
     p += 2;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcType);
     p += 3;
 
-    /*** ¼ÆËãMACµÄÃÜÔ¿ ***/
+    /*** è®¡ç®—MACçš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1641,7 +1663,7 @@ int HSM_IC_GenerateMac(
     }
     p += rv;
 
-    /*** ·ÖÉ¢ ***/
+    /*** åˆ†æ•£ ***/
     if (!pcDeriveData)
     {
         len = 0;
@@ -1665,7 +1687,7 @@ int HSM_IC_GenerateMac(
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿ ***/
+    /*** ä¼šè¯å¯†é’¥ ***/
     rv = Tools_AddFieldSessionData(iSessionKeyMode, pcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1675,15 +1697,15 @@ int HSM_IC_GenerateMac(
     }
     p += rv;
 
-    /*** PAD±êÊ¶, 2H ***/
+    /*** PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPadMode);
     p += 2;
 
-    /*** Êı¾İ³¤¶È, 4H ***/
+    /*** æ•°æ®é•¿åº¦, 4H ***/
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /*** Êı¾İ, nB ***/
+    /*** æ•°æ®, nB ***/
     memcpy(p, pcInputData, iInputLength);
     p += iInputLength;
 
@@ -1691,6 +1713,7 @@ int HSM_IC_GenerateMac(
     p += strlen(pcIV);
 
     iCmdLen = (int)(p - aucCmd);
+    
     rv = TCP_CommunicateHsm_ex(hSessionHandle, aucCmd, iCmdLen, aucRsp, &iRspLen);
     if(rv)
     {
@@ -1728,10 +1751,10 @@ int HSM_IC_VerifyArqc_GenARPC(
     *p ++ = 'K';
     *p ++ = '6';
 
-    /*** Ä£Ê½±êÖ¾, 1H, 1 ¨C ARQCÑéÖ¤ºÍARPC²úÉú ***/
+    /*** æ¨¡å¼æ ‡å¿—, 1H, 1 â€“ ARQCéªŒè¯å’ŒARPCäº§ç”Ÿ ***/
     *p ++ = '1';
 
-    /*** MDKÔ´ÃÜÔ¿ ***/
+    /*** MDKæºå¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1740,7 +1763,7 @@ int HSM_IC_VerifyArqc_GenARPC(
     }
     p += rv;
 
-    /*** PANÓò£¬16H ***/
+    /*** PANåŸŸï¼Œ16H ***/
     rv = Tools_AddFieldPan(PANFMT_DISPER, pcPAN, p);
     if(rv == HAR_PARAM_PAN)
     {
@@ -1753,7 +1776,7 @@ int HSM_IC_VerifyArqc_GenARPC(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** ½»Ò×Êı¾İ³¤¶È, 2H ***/
+    /*** äº¤æ˜“æ•°æ®é•¿åº¦, 2H ***/
     if (!pcData)
     {
         len = 0;
@@ -1766,11 +1789,11 @@ int HSM_IC_VerifyArqc_GenARPC(
     TASS_SPRINTF((char*)p, 3, "%02X", len / 2);
     p += 2;
 
-    /*** ½»Ò×Êı¾İ, n*2H ***/
+    /*** äº¤æ˜“æ•°æ®, n*2H ***/
     memcpy(p, pcData, len);
     p += len;
 
-    /*** ·Ö¸ô·û ***/
+    /*** åˆ†éš”ç¬¦ ***/
     *p ++ = ';';
 
     /*** ARQC, 16H ***/
@@ -1782,7 +1805,9 @@ int HSM_IC_VerifyArqc_GenARPC(
     p += 4;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1791,7 +1816,7 @@ int HSM_IC_VerifyArqc_GenARPC(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** ARQCÑéÖ¤Ê§°Ü ***/
+    /*** ARQCéªŒè¯å¤±è´¥ ***/
     if(rv == 1)
     {
         /*** ARQC, 16H ***/
@@ -1833,19 +1858,19 @@ int HSM_IC_GenerateMac_SM4(
     *p ++ = 'S';
     *p ++ = '0';
 
-    /*** MACËã·¨Ä£Ê½ ***/
+    /*** MACç®—æ³•æ¨¡å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** MACÈ¡Öµ·½Ê½ ***/
+    /*** MACå–å€¼æ–¹å¼ ***/
     TASS_SPRINTF((char*)p, 3, "%02d", 10);
     p += 2;
 
-    /*** ÃÜÔ¿ÀàĞÍ, 3H, 109¨CMDK; 209¨CMK-SMI; 000¨CKEK; 011¨CKMC; 008¨CZAK; ***/
+    /*** å¯†é’¥ç±»å‹, 3H, 109â€“MDK; 209â€“MK-SMI; 000â€“KEK; 011â€“KMC; 008â€“ZAK; ***/
     TASS_SPRINTF((char*)p, 4, "%s", pcType);
     p += 3;
 
-    /*** ¼ÆËãMACµÄÃÜÔ¿ ***/
+    /*** è®¡ç®—MACçš„å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iKeyIdx, pcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -1854,7 +1879,7 @@ int HSM_IC_GenerateMac_SM4(
     }
     p += rv;
 
-    /*** ·ÖÉ¢ ***/
+    /*** åˆ†æ•£ ***/
     if (!pcDeriveData)
     {
         len = 0;
@@ -1878,7 +1903,7 @@ int HSM_IC_GenerateMac_SM4(
     }
     p += rv;
 
-    /*** »á»°ÃÜÔ¿ ***/
+    /*** ä¼šè¯å¯†é’¥ ***/
     rv = Tools_AddFieldSessionData(iSessionKeyMode, pcSessionData, p);
     if(rv == HAR_PARAM_SESSION_KEY_DATA || rv == HAR_PARAM_SESSION_KEY_MODE)
     {
@@ -1888,15 +1913,15 @@ int HSM_IC_GenerateMac_SM4(
     }
     p += rv;
 
-    /*** PAD±êÊ¶, 2H ***/
+    /*** PADæ ‡è¯†, 2H ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iPadMode);
     p += 2;
 
-    /*** Êı¾İ³¤¶È, 4H ***/
+    /*** æ•°æ®é•¿åº¦, 4H ***/
     TASS_SPRINTF((char*)p, 5, "%04X", iInputLength);
     p += 4;
 
-    /*** Êı¾İ, nB ***/
+    /*** æ•°æ®, nB ***/
     memcpy(p, pcInputData, iInputLength);
     p += iInputLength;
 
@@ -1905,7 +1930,9 @@ int HSM_IC_GenerateMac_SM4(
     p += strlen(pcIV);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1940,7 +1967,9 @@ int HSM_GetDeviceBaseInfo(char *pcDmkCv/*OUT*/, char *pcVersion, char *pcSerial)
     *p ++ = 'C';
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -1992,11 +2021,11 @@ int HSM_CalculateHash(
     *p ++ = '3';
     *p ++ = 'C';
 
-    /*** ÕªÒªËã·¨Ä£Ê½£¬2N ***/
+    /*** æ‘˜è¦ç®—æ³•æ¨¡å¼ï¼Œ2N ***/
     TASS_SPRINTF((char*)p, 3, "%02d", iMode);
     p += 2;
 
-    /*** Êı¾İ³¤¶È, 4N ***/
+    /*** æ•°æ®é•¿åº¦, 4N ***/
     if (iInputLength > 4 * 1024)
     {
         LOG_ERROR("Parameter: iInputLength = [%d] is invalid, it must be less than %d.",
@@ -2007,7 +2036,7 @@ int HSM_CalculateHash(
     TASS_SPRINTF((char*)p, 5, "%04d", iInputLength);
     p += 4;
 
-    /*** Êı¾İ, nB ***/
+    /*** æ•°æ®, nB ***/
     memcpy(p, pucInputData, iInputLength);
     p += iInputLength;
 
@@ -2027,7 +2056,7 @@ int HSM_CalculateHash(
     memcpy(p, pucUserID, iUserIDLen);
     p += iUserIDLen;
 
-    /*** DER±àÂëµÄsm2¹«Ô¿³¤¶È ***/
+    /*** DERç¼–ç çš„sm2å…¬é’¥é•¿åº¦ ***/
     if (iSM2PubLen > 1024)
     {
         LOG_ERROR("Parameter: iSM2PubLen = [%d] is invalid.", iSM2PubLen);
@@ -2036,12 +2065,14 @@ int HSM_CalculateHash(
     TASS_SPRINTF((char*)p, 5, "%04d", iSM2PubLen);
     p += 4;
 
-    /*** DER±àÂëµÄsm2¹«Ô¿ ***/
+    /*** DERç¼–ç çš„sm2å…¬é’¥ ***/
     memcpy(p, pucSM2Pub, iSM2PubLen);
     p += iSM2PubLen;
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -2082,7 +2113,7 @@ int HSM_GenerateRandomData(void *hSessionHandle, int iRandomLength, unsigned cha
     *p ++ = 'C';
     *p ++ = 'R';
 
-    /*** Êı¾İ³¤¶È, 4N ***/
+    /*** æ•°æ®é•¿åº¦, 4N ***/
     if (iRandomLength > 2048)
     {
         LOG_ERROR("Parameter: iRandomLength = [%d] is invalid, it must be 1 - 2048.", iRandomLength);
@@ -2131,15 +2162,15 @@ int HSM_IC_OfflinePin_PlaintextPin(
     *p ++ = 'K';
     *p ++ = 'X';
 
-    /*** ·½°¸ID ***/
+    /*** æ–¹æ¡ˆID ***/
     TASS_SPRINTF((char*)p, 2, "%d", 9);
     p += 1;
 
-    /*** Ó¦ÓÃÖ÷ÃÜÔ¿ÀàĞÍ ***/
+    /*** åº”ç”¨ä¸»å¯†é’¥ç±»å‹ ***/
     memcpy(p, "109", 3);
     p += 3;
 
-    /*** Ó¦ÓÃÖ÷ÃÜÔ¿ ***/
+    /*** åº”ç”¨ä¸»å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -2148,7 +2179,7 @@ int HSM_IC_OfflinePin_PlaintextPin(
     }
     p += rv;
 
-    /*** PAN»òPANĞòÁĞºÅ ***/
+    /*** PANæˆ–PANåºåˆ—å· ***/
     memcpy(p, pcPan, 16);
     p += 16;
 
@@ -2156,39 +2187,41 @@ int HSM_IC_OfflinePin_PlaintextPin(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** PINBLOCK¸ñÊ½1 ***/
+    /*** PINBLOCKæ ¼å¼1 ***/
     memcpy(p, pcPinBlkFmt1, 2);
     p += 2;
 
-    /*** PINÊäÈëÄ£Ê½, ¹Ì¶¨Îª1 ***/
+    /*** PINè¾“å…¥æ¨¡å¼, å›ºå®šä¸º1 ***/
     memcpy(p, "1", 1);
     p += 1;
 
-    /*** Ã÷ÎÄPIN£¨ĞÂ£©***/
+    /*** æ˜æ–‡PINï¼ˆæ–°ï¼‰***/
     memcpy(p, pcPlaintextPin_New, strlen(pcPlaintextPin_New));
     p += strlen(pcPlaintextPin_New);
 
-    /*** ·Ö¸ô·û1 ***/
+    /*** åˆ†éš”ç¬¦1 ***/
     memcpy(p, ";", 1);
     p += 1;
 
     if(!strcmp(pcPinBlkFmt1, "42"))
     {
-        /*** Ã÷ÎÄPIN£¨¾É£©***/
+        /*** æ˜æ–‡PINï¼ˆæ—§ï¼‰***/
         memcpy( p, pcPlaintextPin_Old, strlen(pcPlaintextPin_Old) );
         p += strlen(pcPlaintextPin_Old);
 
-        /*** ·Ö¸ô·û2 ***/
+        /*** åˆ†éš”ç¬¦2 ***/
         memcpy( p, ";", 1 );
         p += 1;
     }
 
-    /*** ÕÊºÅ ***/
+    /*** å¸å· ***/
     memcpy( p, pcAccountNum, strlen(pcAccountNum) );
     p += strlen(pcAccountNum);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -2198,7 +2231,7 @@ int HSM_IC_OfflinePin_PlaintextPin(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** PINÃÜÎÄ×Ö½ÚÊı 4H***/
+    /*** PINå¯†æ–‡å­—èŠ‚æ•° 4H***/
     iPinCipherLen = Tools_ConvertHexBuf2Int(p, 4);
     p += 4;
 
@@ -2233,15 +2266,15 @@ int HSM_IC_OfflinePin_CipherPin(
     *p ++ = 'K';
     *p ++ = 'X';
 
-    /*** ·½°¸ID ***/
+    /*** æ–¹æ¡ˆID ***/
     TASS_SPRINTF((char*)p, 2, "%d", 9);
     p += 1;
 
-    /*** Ó¦ÓÃÖ÷ÃÜÔ¿ÀàĞÍ ***/
+    /*** åº”ç”¨ä¸»å¯†é’¥ç±»å‹ ***/
     memcpy(p, "109", 3);
     p += 3;
 
-    /*** Ó¦ÓÃÖ÷ÃÜÔ¿ ***/
+    /*** åº”ç”¨ä¸»å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iDstKeyIdx, pcDstKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -2250,7 +2283,7 @@ int HSM_IC_OfflinePin_CipherPin(
     }
     p += rv;
 
-    /*** PAN»òPANĞòÁĞºÅ ***/
+    /*** PANæˆ–PANåºåˆ—å· ***/
     memcpy(p, pcPan, 16);
     p += 16;
 
@@ -2258,30 +2291,30 @@ int HSM_IC_OfflinePin_CipherPin(
     memcpy(p, pcAtc, 4);
     p += 4;
 
-    /*** PINBLOCK¸ñÊ½1 ***/
+    /*** PINBLOCKæ ¼å¼1 ***/
     memcpy(p, pcDstPinBlkFmt, 2);
     p += 2;
 
-    /*** PINÊäÈëÄ£Ê½, ¸Ã²ÎÊıÖ»ÄÜÎª2»ò3 ***/
+    /*** PINè¾“å…¥æ¨¡å¼, è¯¥å‚æ•°åªèƒ½ä¸º2æˆ–3 ***/
     memcpy(p, pcPinInputMode, 1);
     p += 1;
 
-    /*** PINBLOCK¸ñÊ½2 ***/
+    /*** PINBLOCKæ ¼å¼2 ***/
     memcpy(p, pcSrcPinBlkFmt, 2);
     p += 2;
 
-    /*** PINÃÜÎÄ£¨ĞÂ£©***/
+    /*** PINå¯†æ–‡ï¼ˆæ–°ï¼‰***/
     memcpy(p, pcCipherPin_New, strlen(pcCipherPin_New));
     p += strlen(pcCipherPin_New);
 
     if(!strcmp(pcDstPinBlkFmt, "42"))
     {
-        /*** PINÃÜÎÄ£¨¾É£©***/
+        /*** PINå¯†æ–‡ï¼ˆæ—§ï¼‰***/
         memcpy(p, pcCipherPin_Old, strlen(pcCipherPin_Old));
         p += strlen(pcCipherPin_Old);
     }
 
-    /*** Ô´PIN ¼ÓÃÜÃÜÔ¿ÃÜÔ¿ ***/
+    /*** æºPIN åŠ å¯†å¯†é’¥å¯†é’¥ ***/
     rv = Tools_AddFieldKey(iSrcKeyIdx, pcSrcKeyCipherByLmk, p);
     if(rv == HAR_PARAM_VALUE)
     {
@@ -2290,12 +2323,14 @@ int HSM_IC_OfflinePin_CipherPin(
     }
     p += rv;
 
-    /*** ÕÊºÅ ***/
+    /*** å¸å· ***/
     memcpy(p, pcAccountNum, strlen(pcAccountNum));
     p += strlen(pcAccountNum);
 
     iCmdLen = (int)(p - aucCmd);
-    rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+    /*
+     *rv = TCP_CommunicateHsm(aucCmd, iCmdLen, aucRsp, &iRspLen);
+     */
     if(rv)
     {
         LOG_ERROR("Communicate with Hsm error, return code = [%d], [%#010X].", rv, rv);
@@ -2305,7 +2340,7 @@ int HSM_IC_OfflinePin_CipherPin(
     /*** Response Buffer ***/
     p = aucRsp;
 
-    /*** PINÃÜÎÄ×Ö½ÚÊı 4H***/
+    /*** PINå¯†æ–‡å­—èŠ‚æ•° 4H***/
     iPinCipherLen = Tools_ConvertHexBuf2Int(p, 4);
     p += 4;
 
