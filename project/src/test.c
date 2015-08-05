@@ -8,7 +8,7 @@ int rv = 0;
 //Tass_Disper_Zmk
 void Test_Disper_ZMK(void *hSessionHandle){
   
-    int iZmkIdx = 0;
+    int iZmkIdx =  0;
     char pcDisData[65] = "00000000000000000000000000000000";
     char pcZmkKey_ZMK[128] = "X801617441513A2F135AB14EAAD1069DF";
     char pcZmkKey_LMK[128] = "X801617441513A2F135AB14EAAD1069DF";
